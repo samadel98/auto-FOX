@@ -20,6 +20,10 @@
     :target: https://docs.python.org/3.10/
 .. image:: https://img.shields.io/badge/python-3.11-blue.svg
     :target: https://docs.python.org/3.11/
+.. image:: https://img.shields.io/badge/python-3.12-blue.svg
+    :target: https://docs.python.org/3.12/
+.. image:: https://img.shields.io/badge/python-3.13-blue.svg
+    :target: https://docs.python.org/3.13/
 
 ###########################################
 Automated Forcefield Optimization Extension
