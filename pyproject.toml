@@ -69,8 +69,8 @@ armc2yaml = "FOX.entry_points:main_armc2yaml"
 "FOX.recipes.xyz_to_gro" = "FOX.recipes._xyz_to_gro:main"
 
 [project.urls]
-Homepage = "https://github.com/nlesc-nano/Auto-FOX"
-"Bug Tracker" = "https://github.com/nlesc-nano/auto-FOX/issues"
+Homepage = "https://github.com/samadel98/auto-FOX"
+"Bug Tracker" = "https://github.com/samadel98/auto-FOX/issues"
 Documentation = "https://auto-fox.readthedocs.io/en/latest/"
 
 [project.optional-dependencies]
