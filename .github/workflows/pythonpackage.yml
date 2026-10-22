@@ -35,12 +35,24 @@ jobs:
                 os: [ubuntu-latest, macos-latest, windows-latest]
                 version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
                 special: ['']
+                exclude:
+                    # setup-python has no Python 3.8 or 3.9 builds for Ubuntu 26.04 (ubuntu-latest)
+                    -   os: ubuntu-latest
+                        version: '3.8'
+                    -   os: ubuntu-latest
+                        version: '3.9'
                 include:
+                    -   os: ubuntu-24.04
+                        special: ''
+                        version: '3.8'
+                    -   os: ubuntu-24.04
+                        special: ''
+                        version: '3.9'
                     # QMFlows master still pins numpy<2, which has no Python 3.13 wheels
                     -   os: ubuntu-latest
                         special: '; pre-release'
                         version: '3.12'
-                    -   os: ubuntu-latest
+                    -   os: ubuntu-24.04
                         special: '; minimum version'
                         version: '3.8'
         env:
@@ -58,13 +70,13 @@ jobs:
                     python-version: ${{ matrix.version }}
 
             -   name: Install CP2K
-                if: matrix.os == 'ubuntu-latest'
+                if: startsWith(matrix.os, 'ubuntu')
                 run: |
                     curl -Lsf "https://github.com/cp2k/cp2k/releases/download/v${CP2K_VERSION}/cp2k-${CP2K_VERSION}-Linux-gnu-x86_64.ssmp" -o /usr/local/bin/cp2k.ssmp
                     chmod u+rx /usr/local/bin/cp2k.ssmp
 
             -   name: Info CP2K
-                if: matrix.os == 'ubuntu-latest'
+                if: startsWith(matrix.os, 'ubuntu')
                 run: cp2k.ssmp --version
 
             -   name: Install dependencies
