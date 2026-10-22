@@ -2373,7 +2373,7 @@ class MultiMolecule(_MultiMolecule):
         n_atom = len(plams_mol)
         iterator = chain.from_iterable(at.coords for mol in mol_list for at in mol)
         coords = np.fromiter(iterator, dtype=float, count=n_mol*n_atom*3)
-        coords.shape = n_mol, n_atom, 3
+        coords = coords.reshape(n_mol, n_atom, 3)
 
         kwargs: dict = {}
 

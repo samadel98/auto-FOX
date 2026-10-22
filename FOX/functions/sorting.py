@@ -108,7 +108,7 @@ def sort_param(
 
         iterator = (seperator.join(i) for i in atoms_split.reshape(-1, n))
         ret = np.fromiter(iterator, dtype=atoms.dtype, count=atoms.size)
-        ret.shape = atoms.shape
+        ret = ret.reshape(atoms.shape)
 
     # Check for duplicates
     if not check_duplicates:

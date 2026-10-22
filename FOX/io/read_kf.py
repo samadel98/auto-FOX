@@ -64,7 +64,7 @@ def read_kf(filename: Union[str, 'PathLike[str]']) -> Tuple[np.ndarray, IdxDict]
     mol_range = range(1, 1+mol_count)
     iterator = chain.from_iterable(kf.read('History', f'Coords({i})') for i in mol_range)
     xyz = np.fromiter(iterator, dtype=float, count=count)
-    xyz.shape = shape
+    xyz = xyz.reshape(shape)
 
     return xyz, _get_idx_dict(kf)
 

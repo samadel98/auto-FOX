@@ -261,7 +261,7 @@ class ParamMappingABC(AbstractDataClass, ABC):
             ar = _ar
         elif _ar.ndim == 1:
             ar = np.tile(_ar, prm_len)
-            ar.shape = prm_len, -1
+            ar = ar.reshape(prm_len, -1)
         else:
             raise ValueError("'move_range' expected a 1D or 2D array; "
                              f"observed dimensionality: {_ar.ndim}")

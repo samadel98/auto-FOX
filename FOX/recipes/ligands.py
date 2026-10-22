@@ -158,13 +158,13 @@ def get_lig_center(mol: MultiMolecule, start: int, step: int, stop: Optional[int
     # Extract the ligands
     ligands = mol[:, start:stop].copy()
     m, n, _ = ligands.shape
-    ligands.shape = m, n // step, step, 3
+    ligands = ligands.reshape(m, n // step, step, 3)
 
     if not mass_weighted:
         return np.asarray(ligands.mean(axis=2))
 
     mass = ligands.mass[start:stop]
-    mass.shape = 1, n // step, step, 1
+    mass = mass.reshape(1, n // step, step, 1)
     ligands *= mass
     return np.asarray(ligands.sum(axis=2) / mass.sum(axis=2))
 

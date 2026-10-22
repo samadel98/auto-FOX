@@ -474,7 +474,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             array = np.fromiter(_value, dtype=dtype)
         if ndmin == 2:
             cls = type(self)
-            array.shape = (-1, cls._SHAPE_DICT[name.strip("_")]["shape"])
+            array = array.reshape((-1, cls._SHAPE_DICT[name.strip("_")]["shape"]))
 
         try:
             setattr(self, name, array)
@@ -621,7 +621,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             # Cast into a flattened array of indices
             else:
                 ar = np.fromiter(chain.from_iterable(value), dtype=int)
-                ar.shape = len(ar) // cls._SHAPE_DICT[key]['shape'], cls._SHAPE_DICT[key]['shape']
+                ar = ar.reshape(-1, cls._SHAPE_DICT[key]['shape'])
                 psf_dict[key] = ar
 
         return psf_dict
@@ -798,7 +798,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             [np.ravel(angle_dict[i] + offset) for (i, _), offset in offset_dict.items() if
              i in angle_dict]
         )
-        ret.shape = -1, cls._SHAPE_DICT[name]["shape"]
+        ret = ret.reshape(-1, cls._SHAPE_DICT[name]["shape"])
         return ret
 
     @overload
