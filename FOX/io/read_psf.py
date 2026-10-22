@@ -38,6 +38,7 @@ from nanoutils import (
 )
 
 from ..utils import read_str_file, read_rtf_file
+from .._compat import COPY_IF_NEEDED
 from ..functions.molecule_utils import get_bonds, get_angles, get_dihedrals, get_impropers
 
 try:
@@ -468,7 +469,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
         _value = [] if value is None else value
 
         try:
-            array = np.array(_value, dtype=dtype, ndmin=ndmin, copy=False)
+            array = np.array(_value, dtype=dtype, ndmin=ndmin, copy=COPY_IF_NEEDED)
         except TypeError:  # **value** is an iterator
             array = np.fromiter(_value, dtype=dtype)
         if ndmin == 2:

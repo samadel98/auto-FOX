@@ -35,6 +35,8 @@ from typing import TYPE_CHECKING, overload
 import numpy as np
 import pandas as pd
 
+from .._compat import COPY_IF_NEEDED
+
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
     from numpy import float64 as f8
@@ -95,14 +97,14 @@ def mse_normalized_weighted(qm: ArrayLike, mm: ArrayLike) -> f8:
 
     """
     if isinstance(qm, pd.DataFrame):
-        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=False).T
+        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED).T
     else:
-        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=False)
+        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED)
 
     if isinstance(mm, pd.DataFrame):
-        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=False).T
+        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED).T
     else:
-        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=False)
+        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED)
 
     zeros_special_casing = _check_zeros(qm, mm)
     if zeros_special_casing is not None:
@@ -123,14 +125,14 @@ def mse_normalized_max(qm: ArrayLike, mm: ArrayLike) -> f8:
 
     """  # noqa: E501
     if isinstance(qm, pd.DataFrame):
-        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=False).T
+        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED).T
     else:
-        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=False)
+        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED)
 
     if isinstance(mm, pd.DataFrame):
-        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=False).T
+        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED).T
     else:
-        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=False)
+        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED)
 
     zeros_special_casing = _check_zeros(qm, mm)
     if zeros_special_casing is not None:
@@ -171,14 +173,14 @@ def mse_normalized_weighted_v2(qm: ArrayLike, mm: ArrayLike) -> f8:
 
     """
     if isinstance(qm, pd.DataFrame):
-        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=False).T
+        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED).T
     else:
-        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=False)
+        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED)
 
     if isinstance(mm, pd.DataFrame):
-        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=False).T
+        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED).T
     else:
-        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=False)
+        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED)
 
     zeros_special_casing = _check_zeros(qm, mm)
     if zeros_special_casing is not None:
@@ -221,12 +223,12 @@ def err_normalized_weighted(qm: ArrayLike, mm: ArrayLike) -> f8:
     if isinstance(qm, pd.DataFrame):
         qm = np.asarray(qm, dtype=np.float64).T
     else:
-        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=False)
+        qm = np.array(qm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED)
 
     if isinstance(mm, pd.DataFrame):
         mm = np.asarray(mm, dtype=np.float64).T
     else:
-        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=False)
+        mm = np.array(mm, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED)
 
     zeros_special_casing = _check_zeros(qm, mm)
     if zeros_special_casing is not None:

@@ -37,6 +37,7 @@ from assertionlib.dataclass import AbstractDataClass
 from nanoutils import Literal, TypedDict, set_docstring
 
 from ..type_hints import ArrayLike
+from .._compat import COPY_IF_NEEDED
 from ..functions.charge_utils import update_charge, get_net_charge, ChargeError
 from ..functions.cp2k_utils import UNIT_MAP_REVERSED
 
@@ -243,7 +244,7 @@ class ParamMappingABC(AbstractDataClass, ABC):
 
     @move_range.setter
     def move_range(self, value: ArrayLike) -> None:
-        _ar = np.array(value, dtype=float, ndmin=1, copy=False)
+        _ar = np.array(value, dtype=float, ndmin=1, copy=COPY_IF_NEEDED)
         prm_len = len(self.param.columns)
 
         if _ar.ndim == 2:

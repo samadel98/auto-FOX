@@ -44,6 +44,7 @@ from nanoutils import group_by_values, Literal
 
 from .. import __version__
 from ..utils import slice_iter, lattice_to_volume
+from .._compat import COPY_IF_NEEDED
 from .multi_mol_magic import _MultiMolecule, AliasTuple
 from ..io.read_kf import read_kf
 from ..io.read_xyz import read_multi_xyz
@@ -375,7 +376,7 @@ class MultiMolecule(_MultiMolecule):
 
         """
         # Reshape the passed coordinates
-        coords = np.array(coords, dtype=float, ndmin=3, copy=False)
+        coords = np.array(coords, dtype=float, ndmin=3, copy=COPY_IF_NEEDED)
         i, j, k = coords.shape
         if i == len(self):
             coords_ = coords.reshape(len(self), 1, 3) if k == 1 else coords
@@ -1948,7 +1949,7 @@ class MultiMolecule(_MultiMolecule):
             elif isinstance(atom_subset, range):
                 return slice(atom_subset.start, atom_subset.stop, atom_subset.step)
 
-        ret = np.array(atom_subset, ndmin=1, copy=False).ravel()
+        ret = np.array(atom_subset, ndmin=1, copy=COPY_IF_NEEDED).ravel()
         try:
             i = ret[0]
         except IndexError:  # Empty sequence

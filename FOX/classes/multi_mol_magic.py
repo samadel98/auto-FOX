@@ -32,6 +32,8 @@ from scm.plams import PeriodicTable, PTError, Settings  # type: ignore
 from assertionlib.ndrepr import NDRepr
 from nanoutils import ArrayLike, Literal
 
+from .._compat import COPY_IF_NEEDED
+
 
 class AliasTuple(NamedTuple):
     """A 2-tuple used for :attr:`FOX.MultiMolecule.atoms` values."""
@@ -72,7 +74,7 @@ _NONE_DICT: Mapping[str, Union[str, int, float]] = MappingProxyType({
 
 
 def _to_int_array(ar: _ArLikeInt) -> np.ndarray[Any, np.dtype[np.intp]]:
-    _ret = np.array(ar, ndmin=1, copy=False)
+    _ret = np.array(ar, ndmin=1, copy=COPY_IF_NEEDED)
     if _ret.dtype == bool:
         raise TypeError("Expected an integer array")
 
@@ -239,7 +241,7 @@ class _MultiMolecule(np.ndarray):
         lattice: None | npt.ArrayLike = None,
     ) -> MT:
         """Create and return a new object."""
-        obj = np.array(coords, dtype=np.float64, ndmin=3, copy=False).view(cls)
+        obj = np.array(coords, dtype=np.float64, ndmin=3, copy=COPY_IF_NEEDED).view(cls)
 
         # Set attributes
         obj.atoms = cast("IdxDict", atoms)
@@ -321,7 +323,7 @@ class _MultiMolecule(np.ndarray):
         if value is None:
             bonds = np.zeros((0, 3), dtype=np.intp)
         else:
-            _bonds = np.array(value, ndmin=2, copy=False)
+            _bonds = np.array(value, ndmin=2, copy=COPY_IF_NEEDED)
             bonds = _bonds.astype(np.intp, casting="same_kind", copy=False)
 
         # Set bond orders to 1 (i.e. 10 / 10) if the order is not specified

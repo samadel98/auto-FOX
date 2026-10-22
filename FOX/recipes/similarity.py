@@ -70,6 +70,7 @@ from functools import partial
 
 import numpy as np
 from FOX import MultiMolecule
+from FOX._compat import COPY_IF_NEEDED
 from scipy.spatial.distance import cdist
 
 try:
@@ -82,7 +83,7 @@ __all__ = ["compare_trajectories", "fps_reduce"]
 
 
 def _parse_md(md, name, dtype=np.float64):
-    md_ar = np.array(md, dtype=dtype, ndmin=3, copy=False, subok=True)
+    md_ar = np.array(md, dtype=dtype, ndmin=3, copy=COPY_IF_NEEDED, subok=True)
     if md_ar.ndim != 3:
         raise ValueError(f"`{name}` expected a <= 3D array; observed dimensionality: {md_ar.ndim}")
     elif not isinstance(md_ar, MultiMolecule):

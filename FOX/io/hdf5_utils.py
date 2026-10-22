@@ -47,6 +47,7 @@ from packaging.version import Version
 
 from .. import __file__ as _fox_file
 from .._version import __version__
+from .._compat import COPY_IF_NEEDED
 from ..utils import get_shape, array_to_index, get_commit_hash
 
 if TYPE_CHECKING:
@@ -745,7 +746,7 @@ def _attr_to_array(index: Union[str, pd.Index]) -> np.ndarray:
     """
     # If **idx** does not belong to the pd.Index class or one of its subclass
     if not isinstance(index, pd.Index):  # **item** belongs to the *name* attribute of pd.Series
-        return np.array(index, dtype='S', ndmin=1, copy=False)
+        return np.array(index, dtype='S', ndmin=1, copy=COPY_IF_NEEDED)
 
     # Convert **item** into an array
     ret = np.array(index.tolist())

@@ -28,6 +28,7 @@ from scm.plams import Settings, Units
 
 from ..utils import read_rtf_file
 from ..io import PRMContainer, PSFContainer
+from .._compat import COPY_IF_NEEDED
 
 __all__ = ['LJDataFrame']
 
@@ -44,7 +45,7 @@ def gmean(x: Union[float, Iterable[float]]) -> float:
 
     """
     try:
-        ar = np.array(x, dtype=float, ndmin=1, copy=False)
+        ar = np.array(x, dtype=float, ndmin=1, copy=COPY_IF_NEEDED)
     except TypeError as ex:
         if isinstance(x, abc.Iterable):
             ar = np.fromiter(x, dtype=float)
