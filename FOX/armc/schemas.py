@@ -117,6 +117,10 @@ def parse_lattice(file: str | bytes | os.PathLike[Any]) -> NDArray[np.float64]:
     return func(file_str)
 
 
+# NOTE: Callable ``Optional_`` defaults must be pure-Python functions without parameters.
+# Since schema 0.7.5 they are passed to `inspect.signature`, which raises for
+# builtins such as `dict` and `np.ndarray.copy`.
+
 #: Schema for validating the ``"phi"`` block.
 phi_schema = Schema({
     Optional_('type', default=lambda: PhiUpdater): Or(
@@ -126,19 +130,19 @@ phi_schema = Schema({
         error=Formatter(f"'phi.type' expected a PhiUpdater class; observed value{EPILOG}")
     ),
 
-    Optional_('phi', default=PHI.copy): Or(
+    Optional_('phi', default=lambda: PHI.copy()): Or(
         And(None, Default(PHI.copy)),
         And(Use(array)),
         error=Formatter(f"'phi.phi' expected a float{EPILOG}")
     ),
 
-    Optional_('gamma', default=GAMMA.copy): Or(
+    Optional_('gamma', default=lambda: GAMMA.copy()): Or(
         And(None, Default(GAMMA.copy)),
         And(Use(array)),
         error=Formatter(f"'phi.gamma' expected a float{EPILOG}")
     ),
 
-    Optional_('a_target', default=A_TARGET.copy): Or(
+    Optional_('a_target', default=lambda: A_TARGET.copy()): Or(
         And(None, Default(A_TARGET.copy)),
         And(lambda n: (0 < array(n)).all() & (1 >= array(n)).all(), Use(array)),
         error=Formatter("'phi.a_target' expected a float or sequence of floats "
@@ -152,7 +156,7 @@ phi_schema = Schema({
         error=Formatter(f"'phi.func' expected a Callable object{EPILOG}")
     ),
 
-    Optional_('kwargs', default=dict): Or(
+    Optional_('kwargs', default=lambda: {}): Or(
         And(None, Default(dict)),
         And(abc.Mapping, lambda n: all(isinstance(k, str) for k in n.keys())),
         error=Formatter(f"'phi.kwargs' expected a Mapping{EPILOG}")
@@ -331,7 +335,7 @@ pes_schema = Schema({
         error=Formatter(f"'pes.*.ref' expected a Sequence of array-likes{EPILOG}"),
     ),
 
-    Optional_('kwargs', default=dict): Or(
+    Optional_('kwargs', default=lambda: {}): Or(
         And(None, Default(dict)),
         And(abc.Mapping, lambda dct: all(isinstance(k, str) for k in dct.keys())),
         And(
@@ -467,7 +471,7 @@ sub_job_schema = Schema({
         error=Formatter(f"'job.*.settings' expected a Mapping{EPILOG}")
     ),
 
-    Optional_('template', default=QmSettings): Or(
+    Optional_('template', default=lambda: QmSettings()): Or(
         And(None, Default(QmSettings)),
         And(str, Use(lambda n: QmSettings(import_mapping(n)))),
         And(abc.Mapping, Use(QmSettings)),
@@ -556,13 +560,13 @@ param_schema = Schema({
         error=Formatter(f"'param.func' expected a Callable object{EPILOG}")
     ),
 
-    Optional_('kwargs', default=dict): Or(
+    Optional_('kwargs', default=lambda: {}): Or(
         And(None, Default(dict)),
         And(abc.Mapping, lambda n: all(isinstance(k, str) for k in n.keys())),
         error=Formatter(f"'param.kwargs' expected a Mapping{EPILOG}")
     ),
 
-    Optional_('move_range', default=MOVE_DEFAULT.copy): Or(
+    Optional_('move_range', default=lambda: MOVE_DEFAULT.copy()): Or(
         And(None, Default(MOVE_DEFAULT.copy)),
         And(Or(abc.Iterable, ArrayLike), Use(array)),
         And(abc.Mapping, lambda n: {'start', 'stop', 'step', 'ratio'}.issuperset(n.keys()),
@@ -570,7 +574,7 @@ param_schema = Schema({
         error=Formatter(f"'param.move_range' expected a Mapping or array-like object{EPILOG}")
     ),
 
-    Optional_('validation', default=dict): Or(
+    Optional_('validation', default=lambda: {}): Or(
         And(None, Default(dict)),
         And(abc.Mapping, Use(dict)),
         error=Formatter(f"'param.validation' expected a dictionary{EPILOG}")
@@ -627,27 +631,27 @@ main_schema = Schema({
         error=Formatter(f"'job' expected a Mapping{EPILOG}")
     ),
 
-    Optional_('pes_validation', default=dict): Or(
+    Optional_('pes_validation', default=lambda: {}): Or(
         abc.MutableMapping,
         And(abc.Mapping, Use(dict)),
         error=Formatter(f"'pes_validation' expected a Mapping{EPILOG}")
     ),
 
-    Optional_('monte_carlo', default=dict): Or(
+    Optional_('monte_carlo', default=lambda: {}): Or(
         And(None, Default(dict)),
         abc.MutableMapping,
         And(abc.Mapping, Use(dict)),
         error=Formatter(f"'monte_carlo' expected a Mapping{EPILOG}")
     ),
 
-    Optional_('phi', default=dict): Or(
+    Optional_('phi', default=lambda: {}): Or(
         And(None, Default(dict)),
         abc.MutableMapping,
         And(abc.Mapping, Use(dict)),
         error=Formatter(f"'phi' expected a Mapping{EPILOG}")
     ),
 
-    Optional_('psf', default=dict): Or(
+    Optional_('psf', default=lambda: {}): Or(
         And(None, Default(dict)),
         abc.MutableMapping,
         And(abc.Mapping, Use(dict)),
