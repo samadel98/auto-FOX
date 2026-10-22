@@ -115,7 +115,7 @@ class TestTOPContainer:
 
         for field_name, series in top.pairs.items():
             ref = pairs_ref[field_name]
-            if np.issubdtype(series.dtype, np.inexact):
+            if isinstance(series.dtype, np.dtype) and np.issubdtype(series.dtype, np.inexact):
                 np.testing.assert_allclose(series.values, ref, err_msg=field_name)
             else:
                 np.testing.assert_array_equal(series.values, ref, err_msg=field_name)
@@ -179,7 +179,7 @@ class TestTOPConcat:
         df: pd.DataFrame = getattr(top, name)
         for field_name, series in df.items():
             ref = ref_df[field_name]
-            if np.issubdtype(series.dtype, np.inexact):
+            if isinstance(series.dtype, np.dtype) and np.issubdtype(series.dtype, np.inexact):
                 np.testing.assert_allclose(series, ref, err_msg=field_name, rtol=0, atol=0.001)
             else:
                 np.testing.assert_array_equal(series, ref, err_msg=field_name)
@@ -207,7 +207,7 @@ class TestTOPConcat:
         df: pd.DataFrame = df_dict[func]
         for field_name, series in df.items():
             ref = ref_df[field_name]
-            if np.issubdtype(series.dtype, np.inexact):
+            if isinstance(series.dtype, np.dtype) and np.issubdtype(series.dtype, np.inexact):
                 np.testing.assert_allclose(series, ref, err_msg=field_name, rtol=0, atol=0.001)
             else:
                 np.testing.assert_array_equal(series, ref, err_msg=field_name)

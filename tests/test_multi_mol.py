@@ -291,7 +291,7 @@ def test_rmsf():
 
     atoms = ('Cd', 'Se', 'O')
     rmsf = mol.init_rmsf(atom_subset=atoms).values
-    np.nan_to_num(rmsf, copy=False)
+    rmsf = np.nan_to_num(rmsf)
     ref = np.load(join(PATH, 'rmsf.npy'))
     np.nan_to_num(ref, copy=False)
     np.testing.assert_allclose(rmsf, ref)
@@ -313,7 +313,7 @@ def test_time_averaged_velocity():
 
     atoms = ('Cd', 'Se', 'O')
     v = mol.init_time_averaged_velocity(atom_subset=atoms).values
-    np.nan_to_num(v, copy=False)
+    v = np.nan_to_num(v)
     ref = np.load(join(PATH, 'time_averaged_velocity.npy'))
     np.nan_to_num(ref, copy=False)
     np.testing.assert_allclose(v, ref)

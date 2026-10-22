@@ -596,7 +596,7 @@ def _sort_atoms(df: pd.DataFrame) -> None:
     param_types = set(df["param_type"])
     for prm in param_types:
         condition = df['param_type'] == prm
-        atoms = df.loc[condition, 'atoms'].values.astype(np.str_)
+        atoms = df.loc[condition, "atoms"].to_numpy(dtype=np.str_)
         try:
             df.loc[condition, 'atoms'] = sort_param(atoms)
         except NotImplementedError as ex:
@@ -757,7 +757,7 @@ def update_count(param, psf=None, mol=None):  # noqa: E302
     # Construct a generator
     if psf is not None:
         psf_iter = psf if len(psf) != 1 else repeat(psf[0], len(param.param.columns))
-        count_iter: Iterator[Mapping[str, int]] = (pd.value_counts(p.atom_type) for p in psf_iter)
+        count_iter: Iterator[Mapping[str, int]] = (p.atom_type.value_counts() for p in psf_iter)
     elif mol is not None:
         mol_iter = mol if len(mol) != 1 else repeat(mol[0], len(param.param.columns))
         count_iter = ({k: len(v) for k, v in m.atoms.items()} for m in mol_iter)

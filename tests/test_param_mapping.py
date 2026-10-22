@@ -50,10 +50,10 @@ PARAM2._net_charge = [0, 0]
 def test_call(input_param: ParamMapping):
     """Test :meth:`ParamMapping.__call__`."""
     param = input_param.copy(deep=True)
-    ref: pd.Series = np.sum(
+    ref: pd.Series = (
         param.param.loc['charge', :] *
         param.metadata.swaplevel(0, 1, axis=1).loc['charge', 'count']
-    )
+    ).sum()
 
     failed_iterations = []
     for i in range(1000):
@@ -62,10 +62,10 @@ def test_call(input_param: ParamMapping):
             failed_iterations.append(i)
             ex_backup = ex
 
-        value: pd.Series = np.sum(
+        value: pd.Series = (
             param.param.loc['charge', :] *
             param.metadata.swaplevel(0, 1, axis=1).loc['charge', 'count']
-        )
+        ).sum()
         np.testing.assert_allclose(value, ref, atol=0.001, err_msg=f"iteration{i}")
 
         try:

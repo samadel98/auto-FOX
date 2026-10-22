@@ -603,15 +603,15 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             # Cast the atoms block into a dataframe
             if key == 'atoms':
                 df = pd.DataFrame(value)
-                df[0] = df[0].astype(int, copy=False)
+                df[0] = df[0].astype(int)
                 df.set_index(0, inplace=True)
                 df.index.name = 'ID'
                 df.columns = ['segment name', 'residue ID', 'residue name',
                               'atom name', 'atom type', 'charge', 'mass', '0']
-                df['residue ID'] = df['residue ID'].astype(int, copy=False)
-                df['charge'] = df['charge'].astype(float, copy=False)
-                df['mass'] = df['mass'].astype(float, copy=False)
-                df['0'] = df['0'].astype(int, copy=False)
+                df['residue ID'] = df['residue ID'].astype(int)
+                df['charge'] = df['charge'].astype(float)
+                df['mass'] = df['mass'].astype(float)
+                df['0'] = df['0'].astype(int)
                 psf_dict[key] = df
 
             # Cast the title in a list of strings

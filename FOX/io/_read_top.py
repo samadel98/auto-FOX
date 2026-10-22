@@ -108,7 +108,7 @@ def _df_allclose(
 
     for k, series1 in df1.items():
         series2 = df2[k]
-        if np.issubdtype(series1.dtype, np.inexact):
+        if isinstance(series1.dtype, np.dtype) and np.issubdtype(series1.dtype, np.inexact):
             if not np.allclose(series1, series2, rtol, atol, equal_nan):
                 return False
         elif not np.array_equal(series1, series2):
@@ -841,9 +841,7 @@ class TOPContainer:
 
                 if old_directive in requires_mol or old_directive == "moleculetype":
                     if old_directive in df_kwargs:
-                        df_kwargs[old_directive] = pd.concat(
-                            [df_kwargs[old_directive], df], copy=False,
-                        )
+                        df_kwargs[old_directive] = pd.concat([df_kwargs[old_directive], df])
                     else:
                         df_kwargs[old_directive] = df
                 elif old_directive in cls.DF_DTYPES:

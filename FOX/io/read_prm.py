@@ -339,7 +339,7 @@ class PRMContainer(AbstractFileContainer):
                 df[i] = default
             else:
                 default_type = str if default is None else type(default)
-                df[i] = df[i].astype(default_type, copy=False)
+                df[i] = df[i].astype(default_type)
         df.set_index(cls._INDEX[key], inplace=True)
 
     """########################### methods for writing .prm files. ##############################"""
