@@ -36,9 +36,10 @@ jobs:
                 version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
                 special: ['']
                 include:
+                    # QMFlows master still pins numpy<2, which has no Python 3.13 wheels
                     -   os: ubuntu-latest
                         special: '; pre-release'
-                        version: '3.13'
+                        version: '3.12'
                     -   os: ubuntu-latest
                         special: '; minimum version'
                         version: '3.8'
@@ -70,8 +71,8 @@ jobs:
                 run: |
                     if [[ "${{ matrix.special }}" == '; pre-release' ]]; then
                         pip install --pre -e .[test-no-optional] --upgrade --force-reinstall
+                        # Not PLAMS master: it has dropped `ADFJob`, which QMFlows still needs
                         pip install git+https://github.com/SCM-NV/qmflows@master --upgrade
-                        pip install git+https://github.com/SCM-NV/PLAMS@master --upgrade
                         pip install git+https://github.com/NLeSC/noodles@master --upgrade
                     elif [[ $SPECIAL"${{ matrix.special }}" == '; minimum version' ]]; then
                         pip install -r ./test_requirement_min_version.txt
