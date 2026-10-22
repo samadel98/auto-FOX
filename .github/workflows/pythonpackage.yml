@@ -66,14 +66,16 @@ jobs:
                 run: |
                     if [[ "${{ matrix.special }}" == '; pre-release' ]]; then
                         pip install --pre -e .[test-no-optional] --upgrade --force-reinstall
+                        # Not PLAMS master: it has dropped `ADFJob`, which QMFlows still needs
                         pip install git+https://github.com/SCM-NV/qmflows@master --upgrade
-                        pip install git+https://github.com/SCM-NV/PLAMS@master --upgrade
                         pip install git+https://github.com/NLeSC/noodles@master --upgrade
                     elif [[ $SPECIAL"${{ matrix.special }}" == '; minimum version' ]]; then
                         pip install -r ./test_requirement_min_version.txt
-                        pip install -e .[test-no-optional]
+                        # Use the minimum versions as constraints so that no other package can upgrade them
+                        pip install -e .[test-no-optional] -c ./test_requirement_min_version.txt
                     else
-                        pip install -e .[test]
+                        # nlesc-CAT still needs `pkg_resources`, which setuptools 82 removed
+                        pip install -e .[test] "setuptools<82"
                     fi
                     pip install https://github.com/nlesc-nano/auto-FOX-data/releases/download/1.2.0/Auto_FOX_Data-1.2.0-py3-none-any.whl
 
@@ -104,7 +106,8 @@ jobs:
             -   name: Set up Python on ubuntu-latest
                 uses: actions/setup-python@v4
                 with:
-                    python-version: "3.x"
+                    # Not "3.x": the newest Python can't build the pinned pandas<2
+                    python-version: "3.11"
 
             -   name: Install linters
                 run: pip install .[lint]
