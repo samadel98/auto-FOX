@@ -765,12 +765,16 @@ def update_count(param, psf=None, mol=None):  # noqa: E302
         raise TypeError("'psf' and 'mol' cannot be both 'None'")
 
     index = param.metadata.index
-    prm_count_list = [param.metadata[i, 'count'] for i in param.metadata.columns.levels[0]]
     at_sequence = [atoms.split() for *_, atoms in index]
-    for prm_count, count in zip(prm_count_list, count_iter):
+    for i, count in zip(param.metadata.columns.levels[0], count_iter):
         data = get_atom_count(at_sequence, count)
         series = pd.Series({k: v for k, v in zip(index, data) if v is not None}, name='unit')
+
+        # NOTE: Explicitly assign the updated counts back to the metadata,
+        # as with copy-on-write the selected column is not a view of the latter
+        prm_count = param.metadata[i, 'count'].copy()
         prm_count.update(series)
+        param.metadata[i, 'count'] = prm_count
 
 
 def _assign_residues(plams_mol: Molecule, res_list: Iterable[Iterable[int]]) -> None:

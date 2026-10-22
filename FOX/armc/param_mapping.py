@@ -693,9 +693,12 @@ class ParamMapping(ParamMappingABC):
                 exclude = None if not exclude_old else exclude_old | count_zero
             exclude_old.update(count.index[count != 0])
 
+            # NOTE: `update_charge` updates `param` inplace; explicitly assign it back
+            # to `self.param` as, with copy-on-write, it is not a view of the latter
+            param = self.param.loc[key, i].copy()
             ret = update_charge(
                 atom, value,
-                param=self.param.loc[key, i],
+                param=param,
                 count=count,
                 atom_coefs=self.constraints[key],
                 prm_min=self.metadata.loc[key, (i, 'min')],
@@ -703,6 +706,7 @@ class ParamMapping(ParamMappingABC):
                 net_charge=charge,
                 exclude=exclude,
             )
+            self.param.loc[key, i] = param.values
 
             # NOTE: pandas bugs out if the assignment is carried out with the help of
             # a dataframe, instead setting all values `nan`; use an `ndarray` instead.

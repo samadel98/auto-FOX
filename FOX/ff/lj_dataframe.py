@@ -276,7 +276,7 @@ class LJDataFrame(pd.DataFrame):
                 if k2 in series:
                     continue
                 k1 = k2.split('_')[0]
-                psf.atom_type[(psf.atom_type == k1) & (psf.charge == v)] = k2
+                psf.atoms.loc[(psf.atom_type == k1) & (psf.charge == v), 'atom type'] = k2
 
         return series_unique.to_dict()
 
