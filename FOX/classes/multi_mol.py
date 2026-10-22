@@ -433,7 +433,7 @@ class MultiMolecule(_MultiMolecule):
         self.atom1 = at_subset[self.atom1]
         self.atom2 = at_subset[self.atom2]
         self.bonds[:, 0:2].sort(axis=1)
-        idx = self.bonds[:, 0:2].argsort(axis=0)[:, 0]
+        idx = np.lexsort((self.bonds[:, 1], self.bonds[:, 0]))
         self.bonds = self.bonds[idx]
 
     @overload
@@ -606,7 +606,7 @@ class MultiMolecule(_MultiMolecule):
             mol.atom1 = idx_range[mol.atom1]
             mol.atom2 = idx_range[mol.atom2]
             mol.bonds[:, 0:2].sort(axis=1)
-            idx = mol.bonds[:, 0:2].argsort(axis=0)[:, 0]
+            idx = np.lexsort((mol.bonds[:, 1], mol.bonds[:, 0]))
             mol.bonds = mol.bonds[idx]
 
         # Inplace update or return a copy
@@ -649,7 +649,7 @@ class MultiMolecule(_MultiMolecule):
                 core += frag
             else:
                 i = np.array(frag)
-                argsort = np.argsort(symbol[i])
+                argsort = np.argsort(symbol[i], kind="stable")
                 ligands.append(i[argsort].tolist())
         core.sort()
         ligands.sort()
