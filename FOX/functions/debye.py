@@ -23,6 +23,8 @@ import yaml
 import numpy as np
 import pandas as pd
 
+from .._compat import COPY_IF_NEEDED
+
 if TYPE_CHECKING:
     from numpy.typing import NDArray
     from numpy import str_ as U, float64 as f8
@@ -114,10 +116,12 @@ def get_debye_scattering(
 ) -> NDArray[f8]:
     """Placeholder."""
     if validate_param:
-        dist_mat = np.array(dist_mat, dtype=np.float64, ndmin=3, copy=False)
-        scattering_vector = np.array(scattering_vector, dtype=np.float64, ndmin=1, copy=False)
-        symbols1 = np.array(symbols1, dtype=np.str_, ndmin=1, copy=False)
-        symbols2 = np.array(symbols2, dtype=np.str_, ndmin=1, copy=False)
+        dist_mat = np.array(dist_mat, dtype=np.float64, ndmin=3, copy=COPY_IF_NEEDED)
+        scattering_vector = np.array(
+            scattering_vector, dtype=np.float64, ndmin=1, copy=COPY_IF_NEEDED
+        )
+        symbols1 = np.array(symbols1, dtype=np.str_, ndmin=1, copy=COPY_IF_NEEDED)
+        symbols2 = np.array(symbols2, dtype=np.str_, ndmin=1, copy=COPY_IF_NEEDED)
 
         try:
             assert dist_mat.ndim == 3, "Invalid `dist_mat` dimensionality"

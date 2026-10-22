@@ -79,7 +79,7 @@ def read_multi_xyz(filename, return_comment=True, unit='angstrom'):  # noqa: E30
             xyz = np.fromiter(iterator, dtype=np.float64)
         except ValueError as ex:  # Failed to parse the .xyz file
             raise XYZError("Failed to parse the passed xyz file") from ex
-    xyz.shape = (-1, atom_count, 3)
+    xyz = xyz.reshape(-1, atom_count, 3)
 
     if unit != 'angstrom':
         xyz *= Units.conversion_ratio('angstrom', unit)

@@ -124,11 +124,11 @@ def get_bonds(mol: Molecule) -> np.ndarray:
 
     # Sort horizontally
     mass = np.array([[mol[j].mass for j in i] for i in ret])
-    idx1 = np.argsort(mass, axis=1)[:, ::-1]
+    idx1 = np.argsort(mass, axis=1, kind="stable")[:, ::-1]
     ret[:] = np.take_along_axis(ret, idx1, axis=1)
 
-    # Sort and return vertically
-    idx2 = np.argsort(ret, axis=0)[:, 0]
+    # Sort and return vertically (lexicographically, so the order of ties is well-defined)
+    idx2 = np.lexsort(ret.T[::-1])
     return ret[idx2]
 
 
@@ -166,11 +166,11 @@ def get_angles(mol: Molecule) -> np.ndarray:
 
     # Sort horizontally
     mass = np.array([[mol[j].mass for j in i] for i in ret[:, 0::2]])
-    idx1 = np.argsort(mass, axis=1)[:, ::-1]
+    idx1 = np.argsort(mass, axis=1, kind="stable")[:, ::-1]
     ret[:, ::2] = np.take_along_axis(ret[:, ::2], idx1, axis=1)
 
-    # Sort and return vertically
-    idx2 = np.argsort(ret, axis=0)[:, 0]
+    # Sort and return vertically (lexicographically, so the order of ties is well-defined)
+    idx2 = np.lexsort(ret.T[::-1])
     return ret[idx2]
 
 
@@ -214,12 +214,12 @@ def get_dihedrals(mol: Molecule) -> np.ndarray:
 
     # Sort horizontally
     mass = np.array([[mol[j].mass for j in i] for i in ret[:, 1:3]])
-    idx1 = np.argsort(mass, axis=1)
+    idx1 = np.argsort(mass, axis=1, kind="stable")
     ret[:, ::3] = np.take_along_axis(ret[:, ::3], idx1, axis=1)
     ret[:, 1:3] = np.take_along_axis(ret[:, 1:3], idx1, axis=1)
 
-    # Sort and return vertically
-    idx2 = np.argsort(ret, axis=0)[:, 0]
+    # Sort and return vertically (lexicographically, so the order of ties is well-defined)
+    idx2 = np.lexsort(ret.T[::-1])
     return ret[idx2]
 
 
@@ -262,8 +262,8 @@ def get_impropers(mol: Molecule) -> np.ndarray:
     idx1[:, 1:] = idx1[:, 1:][:, ::-1]
     ret[:, 1:] = np.take_along_axis(ret[:, 1:], idx1, axis=1)
 
-    # Sort vertically
-    idx2 = np.argsort(ret, axis=0)[:, 0]
+    # Sort vertically (lexicographically, so the order of ties is well-defined)
+    idx2 = np.lexsort(ret.T[::-1])
     return ret[idx2]
 
 
@@ -306,7 +306,7 @@ def residue_argsort(mol, concatenate=True):  # noqa: E302
             core += frag
         else:
             i = np.array(frag)
-            argsort = np.argsort(symbol[i])
+            argsort = np.argsort(symbol[i], kind="stable")
             ligands.append(i[argsort].tolist())
     core.sort()
     ligands.sort()

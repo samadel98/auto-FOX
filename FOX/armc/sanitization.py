@@ -596,7 +596,7 @@ def _sort_atoms(df: pd.DataFrame) -> None:
     param_types = set(df["param_type"])
     for prm in param_types:
         condition = df['param_type'] == prm
-        atoms = df.loc[condition, 'atoms'].values.astype(np.str_)
+        atoms = df.loc[condition, "atoms"].to_numpy(dtype=np.str_)
         try:
             df.loc[condition, 'atoms'] = sort_param(atoms)
         except NotImplementedError as ex:
@@ -757,7 +757,7 @@ def update_count(param, psf=None, mol=None):  # noqa: E302
     # Construct a generator
     if psf is not None:
         psf_iter = psf if len(psf) != 1 else repeat(psf[0], len(param.param.columns))
-        count_iter: Iterator[Mapping[str, int]] = (pd.value_counts(p.atom_type) for p in psf_iter)
+        count_iter: Iterator[Mapping[str, int]] = (p.atom_type.value_counts() for p in psf_iter)
     elif mol is not None:
         mol_iter = mol if len(mol) != 1 else repeat(mol[0], len(param.param.columns))
         count_iter = ({k: len(v) for k, v in m.atoms.items()} for m in mol_iter)
@@ -765,12 +765,16 @@ def update_count(param, psf=None, mol=None):  # noqa: E302
         raise TypeError("'psf' and 'mol' cannot be both 'None'")
 
     index = param.metadata.index
-    prm_count_list = [param.metadata[i, 'count'] for i in param.metadata.columns.levels[0]]
     at_sequence = [atoms.split() for *_, atoms in index]
-    for prm_count, count in zip(prm_count_list, count_iter):
+    for i, count in zip(param.metadata.columns.levels[0], count_iter):
         data = get_atom_count(at_sequence, count)
         series = pd.Series({k: v for k, v in zip(index, data) if v is not None}, name='unit')
+
+        # NOTE: Explicitly assign the updated counts back to the metadata,
+        # as with copy-on-write the selected column is not a view of the latter
+        prm_count = param.metadata[i, 'count'].copy()
         prm_count.update(series)
+        param.metadata[i, 'count'] = prm_count
 
 
 def _assign_residues(plams_mol: Molecule, res_list: Iterable[Iterable[int]]) -> None:

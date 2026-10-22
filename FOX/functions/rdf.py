@@ -102,7 +102,7 @@ def get_rdf(
     else:
         dens_mean = dist_shape[2] / ((4/3) * np.pi * (0.5 * dist.max(axis=(1, 2)))**3)
     dist2 = (dist / dr).astype(np.int32)
-    dist2.shape = dist_shape[0], dist_shape[1] * dist_shape[2]
+    dist2 = dist2.reshape(dist_shape[0], dist_shape[1] * dist_shape[2])
 
     dens = np.array([np.bincount(i, minlength=idx_max)[:idx_max] for i in dist2], dtype=np.float64)
     if dens_mean.ndim == 0:

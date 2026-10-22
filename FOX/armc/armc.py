@@ -456,7 +456,7 @@ class ARMC(MonteCarloABC):
             for k, v in pes_dict.items()
         )
         ret = np.fromiter(generator, dtype=float, count=len(pes_dict))
-        ret.shape = length, -1
+        ret = ret.reshape(length, -1)
         return ret
 
     def restart(self) -> None:
@@ -504,9 +504,9 @@ class ARMC(MonteCarloABC):
 
             # Set the (to-be incremented) auxiliary error for each parameter
             param = f['param'][:i+1]
-            param.shape = (-1,) + param.shape[2:]
+            param = param.reshape((-1,) + param.shape[2:])
             aux_error = f['aux_error'][:i+1]
-            aux_error.shape = (-1,) + aux_error.shape[2:]
+            aux_error = aux_error.reshape((-1,) + aux_error.shape[2:])
             aux_error = np.swapaxes(aux_error, -2, -1)
             for keys, err in zip(param[:ij], aux_error[:ij]):
                 for _k, _err in zip(keys, err):
@@ -514,7 +514,7 @@ class ARMC(MonteCarloABC):
 
             # Apply aforementioned increments
             aux_error_mod = f['aux_error_mod'][:i+1]
-            aux_error_mod.shape = (-1,) + aux_error_mod.shape[2:]
+            aux_error_mod = aux_error_mod.reshape((-1,) + aux_error_mod.shape[2:])
             for _arr in aux_error_mod[:ij]:
                 for arr in _arr:
                     *_k, err = arr

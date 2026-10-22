@@ -37,6 +37,7 @@ from assertionlib.dataclass import AbstractDataClass
 from nanoutils import Literal, TypedDict, set_docstring
 
 from ..type_hints import ArrayLike
+from .._compat import COPY_IF_NEEDED
 from ..functions.charge_utils import update_charge, get_net_charge, ChargeError
 from ..functions.cp2k_utils import UNIT_MAP_REVERSED
 
@@ -243,7 +244,7 @@ class ParamMappingABC(AbstractDataClass, ABC):
 
     @move_range.setter
     def move_range(self, value: ArrayLike) -> None:
-        _ar = np.array(value, dtype=float, ndmin=1, copy=False)
+        _ar = np.array(value, dtype=float, ndmin=1, copy=COPY_IF_NEEDED)
         prm_len = len(self.param.columns)
 
         if _ar.ndim == 2:
@@ -260,7 +261,7 @@ class ParamMappingABC(AbstractDataClass, ABC):
             ar = _ar
         elif _ar.ndim == 1:
             ar = np.tile(_ar, prm_len)
-            ar.shape = prm_len, -1
+            ar = ar.reshape(prm_len, -1)
         else:
             raise ValueError("'move_range' expected a 1D or 2D array; "
                              f"observed dimensionality: {_ar.ndim}")
@@ -692,9 +693,12 @@ class ParamMapping(ParamMappingABC):
                 exclude = None if not exclude_old else exclude_old | count_zero
             exclude_old.update(count.index[count != 0])
 
+            # NOTE: `update_charge` updates `param` inplace; explicitly assign it back
+            # to `self.param` as, with copy-on-write, it is not a view of the latter
+            param = self.param.loc[key, i].copy()
             ret = update_charge(
                 atom, value,
-                param=self.param.loc[key, i],
+                param=param,
                 count=count,
                 atom_coefs=self.constraints[key],
                 prm_min=self.metadata.loc[key, (i, 'min')],
@@ -702,6 +706,7 @@ class ParamMapping(ParamMappingABC):
                 net_charge=charge,
                 exclude=exclude,
             )
+            self.param.loc[key, i] = param.values
 
             # NOTE: pandas bugs out if the assignment is carried out with the help of
             # a dataframe, instead setting all values `nan`; use an `ndarray` instead.

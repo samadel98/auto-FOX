@@ -215,7 +215,7 @@ def generate_psf(
 
         # Create a nested list with residue indices
         res_ar = np.arange(ligand_start, len(qd))
-        res_ar.shape = -1, ligand_len
+        res_ar = res_ar.reshape(-1, ligand_len)
         res_list: List[Sequence[int]] = res_ar.tolist()
         res_list.insert(0, range(ligand_start))
     else:

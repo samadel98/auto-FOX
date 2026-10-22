@@ -44,6 +44,7 @@ from nanoutils import group_by_values, Literal
 
 from .. import __version__
 from ..utils import slice_iter, lattice_to_volume
+from .._compat import COPY_IF_NEEDED
 from .multi_mol_magic import _MultiMolecule, AliasTuple
 from ..io.read_kf import read_kf
 from ..io.read_xyz import read_multi_xyz
@@ -375,7 +376,7 @@ class MultiMolecule(_MultiMolecule):
 
         """
         # Reshape the passed coordinates
-        coords = np.array(coords, dtype=float, ndmin=3, copy=False)
+        coords = np.array(coords, dtype=float, ndmin=3, copy=COPY_IF_NEEDED)
         i, j, k = coords.shape
         if i == len(self):
             coords_ = coords.reshape(len(self), 1, 3) if k == 1 else coords
@@ -432,7 +433,7 @@ class MultiMolecule(_MultiMolecule):
         self.atom1 = at_subset[self.atom1]
         self.atom2 = at_subset[self.atom2]
         self.bonds[:, 0:2].sort(axis=1)
-        idx = self.bonds[:, 0:2].argsort(axis=0)[:, 0]
+        idx = np.lexsort((self.bonds[:, 1], self.bonds[:, 0]))
         self.bonds = self.bonds[idx]
 
     @overload
@@ -605,7 +606,7 @@ class MultiMolecule(_MultiMolecule):
             mol.atom1 = idx_range[mol.atom1]
             mol.atom2 = idx_range[mol.atom2]
             mol.bonds[:, 0:2].sort(axis=1)
-            idx = mol.bonds[:, 0:2].argsort(axis=0)[:, 0]
+            idx = np.lexsort((mol.bonds[:, 1], mol.bonds[:, 0]))
             mol.bonds = mol.bonds[idx]
 
         # Inplace update or return a copy
@@ -648,7 +649,7 @@ class MultiMolecule(_MultiMolecule):
                 core += frag
             else:
                 i = np.array(frag)
-                argsort = np.argsort(symbol[i])
+                argsort = np.argsort(symbol[i], kind="stable")
                 ligands.append(i[argsort].tolist())
         core.sort()
         ligands.sort()
@@ -1948,7 +1949,7 @@ class MultiMolecule(_MultiMolecule):
             elif isinstance(atom_subset, range):
                 return slice(atom_subset.start, atom_subset.stop, atom_subset.step)
 
-        ret = np.array(atom_subset, ndmin=1, copy=False).ravel()
+        ret = np.array(atom_subset, ndmin=1, copy=COPY_IF_NEEDED).ravel()
         try:
             i = ret[0]
         except IndexError:  # Empty sequence
@@ -2372,7 +2373,7 @@ class MultiMolecule(_MultiMolecule):
         n_atom = len(plams_mol)
         iterator = chain.from_iterable(at.coords for mol in mol_list for at in mol)
         coords = np.fromiter(iterator, dtype=float, count=n_mol*n_atom*3)
-        coords.shape = n_mol, n_atom, 3
+        coords = coords.reshape(n_mol, n_atom, 3)
 
         kwargs: dict = {}
 

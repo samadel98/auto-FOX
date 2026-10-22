@@ -28,6 +28,7 @@ from scm.plams import Settings, Units
 
 from ..utils import read_rtf_file
 from ..io import PRMContainer, PSFContainer
+from .._compat import COPY_IF_NEEDED
 
 __all__ = ['LJDataFrame']
 
@@ -44,7 +45,7 @@ def gmean(x: Union[float, Iterable[float]]) -> float:
 
     """
     try:
-        ar = np.array(x, dtype=float, ndmin=1, copy=False)
+        ar = np.array(x, dtype=float, ndmin=1, copy=COPY_IF_NEEDED)
     except TypeError as ex:
         if isinstance(x, abc.Iterable):
             ar = np.fromiter(x, dtype=float)
@@ -275,7 +276,7 @@ class LJDataFrame(pd.DataFrame):
                 if k2 in series:
                     continue
                 k1 = k2.split('_')[0]
-                psf.atom_type[(psf.atom_type == k1) & (psf.charge == v)] = k2
+                psf.atoms.loc[(psf.atom_type == k1) & (psf.charge == v), 'atom type'] = k2
 
         return series_unique.to_dict()
 

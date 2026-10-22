@@ -143,7 +143,7 @@ def sparse_bond_matrix(mol, dtype=np.bool_, *, sparse_type=csr_matrix, **kwargs)
     # Construct an array of row and column indices
     iterator1 = chain.from_iterable(_bond_id_generator(mol))
     bond_idx = np.fromiter(iterator1, dtype=int, count=count)
-    bond_idx.shape = shape
+    bond_idx = bond_idx.reshape(shape)
 
     # Construct the to-be assigned data
     if dtype_ == bool:

@@ -239,8 +239,16 @@ def constrained_update(
             # Update the charges
             df_kwargs = df.loc[idx]
             df_kwargs["count"] = coef
-            unconstrained_update(net_charge, exclude=exclude_set, **df_kwargs)
-            param.loc[idx] = df_kwargs['param']
+
+            # NOTE: Explicitly keep a reference to the inplace-updated `param` series,
+            # as with copy-on-write the update is not propagated back to `df_kwargs`
+            prm = df_kwargs["param"]
+            unconstrained_update(
+                net_charge, prm, df_kwargs["count"],
+                prm_min=df_kwargs["prm_min"], prm_max=df_kwargs["prm_max"],
+                exclude=exclude_set,
+            )
+            param.loc[idx] = prm
             exclude_set.update(idx.intersection(idx_ref))
 
 
