@@ -5,16 +5,21 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  publish:
+  build:
+    name: Build distributions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
@@ -37,21 +42,47 @@ jobs:
           tree dist
           twine check dist/*
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels
           path: ./dist/*
 
-      - name: Publish the package
-        if: github.event_name == 'release'
-        uses: pypa/gh-action-pypi-publish@release/v1
+  publish:
+    name: Publish to PyPI
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    # Uses PyPI trusted publishing; the publisher (this repository, `pypi.yml`
+    # and the `pypi` environment) must be registered with the PyPI project
+    environment:
+      name: pypi
+      url: https://pypi.org/p/Auto-FOX
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+          name: wheels
+          path: dist/
 
-      - name: Attach wheels to GitHub release
-        if: github.event_name == 'release'
-        uses: AButler/upload-release-assets@v2.0.2
+      - name: Publish the package
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  release-assets:
+    name: Attach wheels to GitHub release
+    if: github.event_name == 'release'
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
         with:
-          files: 'dist/*'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          name: wheels
+          path: dist/
+
+      - name: Upload the release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG_NAME" dist/* --repo "$GITHUB_REPOSITORY"

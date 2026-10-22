@@ -100,7 +100,9 @@ class TestTOPContainer:
 
     def test_to_file(self, top: TOPContainer, tmp_path: Path) -> None:
         top.to_file(tmp_path / "test.top")
-        assertion.isfile(tmp_path / "test.top")
+        # Not `assertion.isfile()`: it doesn't exist on Windows with Python >= 3.12, where
+        # `os.path.isfile` is a builtin with a different `__name__`
+        assertion.assert_(Path.is_file, tmp_path / "test.top")
         top2 = TOPContainer.from_file(tmp_path / "test.top")
         assertion.assert_(top2.allclose, top2, rtol=0, atol=0.0001)
 

@@ -1,6 +1,6 @@
 
-.. image:: https://github.com/nlesc-nano/auto-FOX/workflows/Tests/badge.svg
-    :target: https://github.com/nlesc-nano/auto-FOX/actions?query=workflow%3ATests+branch%3Amaster
+.. image:: https://github.com/samadel98/auto-FOX/actions/workflows/pythonpackage.yml/badge.svg?branch=master
+    :target: https://github.com/samadel98/auto-FOX/actions/workflows/pythonpackage.yml?query=branch%3Amaster
 .. image:: https://readthedocs.org/projects/auto-fox/badge/?version=latest
     :target: https://auto-fox.readthedocs.io/en/latest/
 .. image:: https://codecov.io/gh/nlesc-nano/auto-FOX/branch/master/graph/badge.svg?token=7IgHsRDVdo
@@ -20,6 +20,10 @@
     :target: https://docs.python.org/3.10/
 .. image:: https://img.shields.io/badge/python-3.11-blue.svg
     :target: https://docs.python.org/3.11/
+.. image:: https://img.shields.io/badge/python-3.12-blue.svg
+    :target: https://docs.python.org/3.12/
+.. image:: https://img.shields.io/badge/python-3.13-blue.svg
+    :target: https://docs.python.org/3.13/
 
 ###########################################
 Automated Forcefield Optimization Extension

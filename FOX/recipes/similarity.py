@@ -75,8 +75,8 @@ from scipy.spatial.distance import cdist
 
 try:
     from CAT.distribution import uniform_idx
-    CAT_EX: Optional[ImportError] = None
-except ImportError as ex:
+    CAT_EX: Optional[Exception] = None
+except Exception as ex:  # CAT 1.1 raises an `AttributeError` on import with Python >= 3.13
     CAT_EX = ex
 
 __all__ = ["compare_trajectories", "fps_reduce"]
