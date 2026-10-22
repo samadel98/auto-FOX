@@ -3,8 +3,8 @@
     :target: https://github.com/samadel98/auto-FOX/actions/workflows/pythonpackage.yml?query=branch%3Amaster
 .. image:: https://readthedocs.org/projects/auto-fox/badge/?version=latest
     :target: https://auto-fox.readthedocs.io/en/latest/
-.. image:: https://codecov.io/gh/nlesc-nano/auto-FOX/branch/master/graph/badge.svg?token=7IgHsRDVdo
-    :target: https://codecov.io/gh/nlesc-nano/auto-FOX
+.. image:: https://codecov.io/gh/samadel98/auto-FOX/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/samadel98/auto-FOX
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3988142.svg
     :target: https://doi.org/10.5281/zenodo.3988142
 .. image:: https://badge.fury.io/py/Auto-FOX.svg
@@ -137,7 +137,7 @@ Optional dependencies
 .. _Miniconda: http://conda.pydata.org/miniconda.html
 .. _Anaconda: https://www.anaconda.com/distribution/#download-section
 .. _Matplotlib: https://matplotlib.org/
-.. _FOX.data: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/data
-.. _FOX.examples: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/examples/input.py
+.. _FOX.data: https://github.com/samadel98/auto-FOX/blob/master/FOX/data
+.. _FOX.examples: https://github.com/samadel98/auto-FOX/blob/master/FOX/examples/input.py
 .. _DASK: https://dask.org/
 .. _RDKit: https://www.rdkit.org/
