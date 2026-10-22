@@ -311,9 +311,9 @@ def _get_kd_dist(mol: MultiMolecule, ij: np.ndarray, ligand_count: int,
         j = len(j_ar) // ligand_count
 
         ax1, ax2, ax3 = idx.shape
-        idx.shape = ax1, ax2 // i, i, ax3
+        idx = idx.reshape(ax1, ax2 // i, i, ax3)
         idx -= np.arange(0, j * ax2 // i, j)[None, ..., None, None]
-        idx.shape = ax1, ax2, ax3
+        idx = idx.reshape(ax1, ax2, ax3)
 
         dist[np.isin(idx, np.arange(j))] = np.nan
 

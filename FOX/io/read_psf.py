@@ -38,6 +38,7 @@ from nanoutils import (
 )
 
 from ..utils import read_str_file, read_rtf_file
+from .._compat import COPY_IF_NEEDED
 from ..functions.molecule_utils import get_bonds, get_angles, get_dihedrals, get_impropers
 
 try:
@@ -468,12 +469,12 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
         _value = [] if value is None else value
 
         try:
-            array = np.array(_value, dtype=dtype, ndmin=ndmin, copy=False)
+            array = np.array(_value, dtype=dtype, ndmin=ndmin, copy=COPY_IF_NEEDED)
         except TypeError:  # **value** is an iterator
             array = np.fromiter(_value, dtype=dtype)
         if ndmin == 2:
             cls = type(self)
-            array.shape = (-1, cls._SHAPE_DICT[name.strip("_")]["shape"])
+            array = array.reshape((-1, cls._SHAPE_DICT[name.strip("_")]["shape"]))
 
         try:
             setattr(self, name, array)
@@ -602,15 +603,15 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             # Cast the atoms block into a dataframe
             if key == 'atoms':
                 df = pd.DataFrame(value)
-                df[0] = df[0].astype(int, copy=False)
+                df[0] = df[0].astype(int)
                 df.set_index(0, inplace=True)
                 df.index.name = 'ID'
                 df.columns = ['segment name', 'residue ID', 'residue name',
                               'atom name', 'atom type', 'charge', 'mass', '0']
-                df['residue ID'] = df['residue ID'].astype(int, copy=False)
-                df['charge'] = df['charge'].astype(float, copy=False)
-                df['mass'] = df['mass'].astype(float, copy=False)
-                df['0'] = df['0'].astype(int, copy=False)
+                df['residue ID'] = df['residue ID'].astype(int)
+                df['charge'] = df['charge'].astype(float)
+                df['mass'] = df['mass'].astype(float)
+                df['0'] = df['0'].astype(int)
                 psf_dict[key] = df
 
             # Cast the title in a list of strings
@@ -620,7 +621,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             # Cast into a flattened array of indices
             else:
                 ar = np.fromiter(chain.from_iterable(value), dtype=int)
-                ar.shape = len(ar) // cls._SHAPE_DICT[key]['shape'], cls._SHAPE_DICT[key]['shape']
+                ar = ar.reshape(-1, cls._SHAPE_DICT[key]['shape'])
                 psf_dict[key] = ar
 
         return psf_dict
@@ -797,7 +798,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             [np.ravel(angle_dict[i] + offset) for (i, _), offset in offset_dict.items() if
              i in angle_dict]
         )
-        ret.shape = -1, cls._SHAPE_DICT[name]["shape"]
+        ret = ret.reshape(-1, cls._SHAPE_DICT[name]["shape"])
         return ret
 
     @overload

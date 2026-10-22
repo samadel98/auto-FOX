@@ -26,6 +26,7 @@ import numpy as np
 from assertionlib.dataclass import AbstractDataClass
 from nanoutils import set_docstring, SupportsIndex, as_nd_array, TypedDict
 
+from .._compat import COPY_IF_NEEDED
 from ..type_hints import ArrayLike, ArrayLikeOrScalar, Scalar, DTypeLike
 
 __all__ = ['PhiUpdaterABC', 'PhiUpdater']
@@ -86,7 +87,10 @@ class PhiUpdaterABC(AbstractDataClass, ABC, Sized):
 
     @phi.setter
     def phi(self, value: IterOrArrayLike) -> None:
-        self._phi = as_nd_array(value, dtype=float, ndmin=1)
+        # `as_nd_array` passes `copy` directly to `np.array`
+        self._phi = as_nd_array(
+            value, dtype=float, ndmin=1, copy=COPY_IF_NEEDED,  # type: ignore[arg-type]
+        )
 
     @property
     def gamma(self) -> np.ndarray:

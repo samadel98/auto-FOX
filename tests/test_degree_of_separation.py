@@ -12,6 +12,11 @@ from assertionlib import assertion
 
 from FOX.ff.degree_of_separation import degree_of_separation, sparse_bond_matrix
 
+try:
+    from numpy.exceptions import VisibleDeprecationWarning
+except ImportError:  # NumPy < 1.25
+    from numpy import VisibleDeprecationWarning
+
 PATH = Path('tests', 'test_files')
 MOL = Molecule(PATH / 'Cd68Se55_26COO_MD_trajec.xyz')
 MOL.guess_bonds([at for at in MOL if at.symbol in {'C', 'H', 'O'}])
@@ -55,7 +60,7 @@ def test_sparse_bond_matrix():
     )
 
     with warnings.catch_warnings():
-        warnings.simplefilter('ignore', category=np.VisibleDeprecationWarning())
+        warnings.simplefilter('ignore', category=VisibleDeprecationWarning)
 
         for sparse_type in sparse_type_tup:
             mat_n = sparse_bond_matrix(MOL, sparse_type=sparse_type)
