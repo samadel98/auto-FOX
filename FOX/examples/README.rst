@@ -36,5 +36,5 @@ ligand.prm_
 A parameter file for a formate ligand.
 
 
-.. _input: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/examples/input.py
-.. _cp2k_armc: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/examples/cp2k_armc.py
+.. _input: https://github.com/samadel98/auto-FOX/blob/master/FOX/examples/input.py
+.. _cp2k_armc: https://github.com/samadel98/auto-FOX/blob/master/FOX/examples/cp2k_armc.py

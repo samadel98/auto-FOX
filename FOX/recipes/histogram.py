@@ -81,7 +81,6 @@ import copy
 from types import MappingProxyType
 from typing import Iterable, Union, Set, TypeVar, Callable, Mapping
 
-import numpy as np
 import pandas as pd
 
 __all__ = ['filter_atoms']
@@ -97,7 +96,8 @@ def within_set(atom_set: Set[str], atom_pair: Iterable[str]) -> bool:
 
 def between_sets(atom_set: Set[str], atom_pair: Iterable[str], n: int = 1) -> bool:
     """Check if :math:`n` atoms within in atom_set **atom_set** are part of **atom_pair**."""
-    return len(atom_set.intersection(atom_pair)) == n
+    # Count each atom, so that a pair of two identical atoms (e.g. Cd-Cd) counts twice
+    return sum(at in atom_set for at in atom_pair) == n
 
 
 FILTER_MAPPING: Mapping[str, FilterFunc] = MappingProxyType({
@@ -157,7 +157,7 @@ def filter_atoms(df: pd.DataFrame, atoms: Union[str, Iterable[str]],
     """  # noqa
     filter_func = _validate_filter_func(filter_func)
 
-    if isinstance(atoms, (str, np.str)):
+    if isinstance(atoms, str):
         atom_set = {atoms}
     else:
         atom_set = set(atoms)

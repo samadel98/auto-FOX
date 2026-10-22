@@ -1,4 +1,4 @@
-"""A module for testing :mod:`FOX.functions.lj_calculate`."""
+"""A module for testing :mod:`FOX.ff.lj_calculate`."""
 
 from pathlib import Path
 
@@ -12,7 +12,7 @@ PATH = Path('tests') / 'test_files'
 
 
 def test_get_non_bonded() -> None:
-    """Test :func:`FOX.functions.lj_calculate.get_non_bonded`."""
+    """Test :func:`FOX.ff.lj_calculate.get_non_bonded`."""
     psf = PATH / 'Cd68Se55_26COO_MD_trajec.psf'
     prm = PATH / 'Cd68Se55_26COO_MD_trajec.prm'
     mol = MultiMolecule.from_xyz(PATH / 'Cd68Se55_26COO_MD_trajec.xyz')

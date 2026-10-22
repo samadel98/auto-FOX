@@ -26,13 +26,23 @@ from nanoutils import UniqueLoader
 from .armc import dict_to_armc, run_armc
 
 
+def _parse_bool(value: str) -> bool:
+    """Parse a command line boolean; ``bool("False")`` would be ``True``."""
+    value_lower = value.lower()
+    if value_lower in {'true', 'yes', '1'}:
+        return True
+    elif value_lower in {'false', 'no', '0'}:
+        return False
+    raise argparse.ArgumentTypeError(f"expected a boolean such as 'True' or 'False'; got {value!r}")
+
+
 def main_armc(args: Optional[list] = None) -> None:
     """Entrypoint for :func:`FOX.classes.armc.run_armc`."""
     parser = argparse.ArgumentParser(
         prog='FOX',
         usage='init_armc filename -r restart',
-        description=("Initalize the Auto-FOX Addaptive Rate Monte Carlo (ARMC) "
-                     "parameter optimizer."
+        description=("Initialize the Auto-FOX Adaptive Rate Monte Carlo (ARMC) "
+                     "parameter optimizer. "
                      "See 'https://auto-fox.readthedocs.io/en/latest/4_monte_carlo.html' for "
                      "a more detailed description.")
     )
@@ -42,13 +52,13 @@ def main_armc(args: Optional[list] = None) -> None:
     )
 
     parser.add_argument(
-        '-r', '--restart', nargs=1, type=bool, default=[False], required=False,
-        help='Whether or not to continue a previous calculation.'
+        '-r', '--restart', nargs='?', type=_parse_bool, const=True, default=False,
+        required=False, help='Whether or not to continue a previous calculation.'
     )
 
     args_parsed = parser.parse_args(args)
     filename: str = args_parsed.filename[0]
-    restart: bool = args_parsed.restart[0]
+    restart: bool = args_parsed.restart
 
     with open(filename, 'r') as f:
         dct = yaml.load(f.read(), Loader=UniqueLoader)

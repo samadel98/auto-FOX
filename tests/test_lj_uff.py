@@ -1,4 +1,4 @@
-"""A module for testing :mod:`FOX.functions.lj_uff`."""
+"""A module for testing :mod:`FOX.ff.lj_uff`."""
 
 from pathlib import Path
 from itertools import combinations
@@ -12,7 +12,7 @@ PATH = Path('tests') / 'test_files'
 
 
 def test_combine_sigma() -> None:
-    """Test :func:`FOX.functions.lj_uff.combine_sigma`."""
+    """Test :func:`FOX.ff.lj_uff.combine_sigma`."""
     ref = np.load(PATH / 'uff_sigma.npy')
     sigma = np.array([combine_sigma(at1, at2)for at1, at2 in combinations(UFF_DF.index, r=2)])
 
@@ -21,7 +21,7 @@ def test_combine_sigma() -> None:
 
 
 def test_combine_epsilon() -> None:
-    """Test :func:`FOX.functions.lj_uff.combine_epsilon`."""
+    """Test :func:`FOX.ff.lj_uff.combine_epsilon`."""
     ref = np.load(PATH / 'uff_epsilon.npy')
     eps = np.array([combine_epsilon(at1, at2)for at1, at2 in combinations(UFF_DF.index, r=2)])
 

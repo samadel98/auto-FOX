@@ -33,10 +33,10 @@ utils.py_
 A module with miscellaneous functions.
 
 
-.. _adf: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/functions/adf.py
-.. _charge_utils: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/functions/charge_utils.py
-.. _cp2k_utils: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/functions/cp2k_utils.py
-.. _rdf: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/functions/rdf.py
-.. _utils: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/functions/utils.py
+.. _adf: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/adf.py
+.. _charge_utils: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/charge_utils.py
+.. _cp2k_utils: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/cp2k_utils.py
+.. _rdf: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/rdf.py
+.. _utils: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/utils.py
 
 .. _CP2K: https://www.cp2k.org/

@@ -261,7 +261,7 @@ rst_epilog = """
 .. _FOX.MultiMolecule: 3_multimolecule.html#api
 .. _FOX.MonteCarlo: 4_monte_carlo.html#fox-montecarlo-api
 .. _FOX.ARMC: 4_monte_carlo.html#fox-armc-api
-.. _FOX.PSF: https://github.com/nlesc-nano/auto-FOX/blob/master/FOX/classes/psf.py
+.. _FOX.PSF: https://github.com/samadel98/auto-FOX/blob/master/FOX/io/read_psf.py
 .. _plams.PeriodicTable: https://www.scm.com/doc/plams/components/utils.html#periodic-table
 .. _plams.Job: https://www.scm.com/doc/plams/components/jobs.html#job-api
 .. _plams.Settings: https://www.scm.com/doc/plams/components/settings.html
