@@ -7,7 +7,7 @@ import shutil
 import subprocess
 from os import PathLike
 from pathlib import Path
-from typing import Tuple, Generator, Any, cast, List, Optional, Union
+from typing import Tuple, Generator, Any, cast, Dict, List, Optional, Union
 from itertools import combinations_with_replacement
 
 import numpy as np
@@ -21,6 +21,7 @@ from assertionlib import assertion
 from FOX.testing_utils import load_results, compare_hdf5
 from FOX.armc import dict_to_armc, run_armc
 from FOX.armc.sanitization import _sort_atoms
+from FOX.armc.schemas import mc_schema
 from FOXdata import (
     ARMC_DIR as ARMC_REF,
     ARMCPT_DIR as ARMCPT_REF,
@@ -182,7 +183,10 @@ def _get_phi_iter(n: int = 3) -> Generator[List[Tuple[int, int]], None, None]:
 
 
 @delete_finally(PATH / '_ARMC', PATH / '_ARMCPT')
-@pytest.mark.parametrize('name', ['armc_ref.yaml', 'armcpt_ref.yaml'])
+@pytest.mark.parametrize('name', [
+    'armc_ref.yaml',
+    pytest.param('armcpt_ref.yaml', marks=pytest.mark.slow),
+])
 def test_armc(name: str) -> None:
     """Test :class:`ARMC` and :class:`ARMCPT`."""
     file = PATH / name
@@ -252,7 +256,7 @@ def _get_seeded_armc(name: str, path: Path, folder: str, seed: Any, n: int) -> T
 
 @pytest.mark.parametrize('name,n', [
     ('armc_ref.yaml', 1),
-    ('armcpt_ref.yaml', 3),
+    pytest.param('armcpt_ref.yaml', 3, marks=pytest.mark.slow),
 ], ids=['armc', 'armcpt'])
 def test_armc_seed(name: str, n: int, tmp_path: Path) -> None:
     """Test that ARMC runs with the same ``monte_carlo.seed`` make the same moves."""
@@ -275,7 +279,12 @@ def test_armc_seed(name: str, n: int, tmp_path: Path) -> None:
         assertion.assert_(np.array_equal, f1['param'][:], f3['param'][:], invert=True)
 
 
-@pytest.mark.parametrize('n_results', [8, 13, 19])
+# 19: interrupted right after a rejected move
+@pytest.mark.parametrize('n_results', [
+    pytest.param(8, marks=pytest.mark.slow),
+    pytest.param(13, marks=pytest.mark.slow),
+    19,
+])
 def test_armc_restart_seed(n_results: int, tmp_path: Path) -> None:
     """Test that an interrupted and restarted ARMC run makes the same moves as one without."""
     armc1, job_kwargs1 = _get_seeded_armc('armc_ref.yaml', tmp_path, 'ref', 1, n=1)
@@ -323,24 +332,32 @@ def test_armc_settings(tmp_path: Path) -> None:
         assertion.assert_(np.all, f['acceptance'][:], invert=True)
 
 
+@pytest.fixture(scope='module')
+def armc_kwargs() -> Tuple[type, Dict[str, Any]]:
+    """Return the ARMC type and the arguments for constructing it from armc_ref.yaml."""
+    with open(PATH / 'armc_ref.yaml', 'r') as f:
+        dct = yaml.load(f.read(), Loader=UniqueLoader)
+    armc, _ = dict_to_armc(dct)
+    kwargs = {k: getattr(armc, k) for k in ('phi', 'param', 'package_manager', 'molecule')}
+    return type(armc), kwargs
+
+
 @pytest.mark.parametrize('seed,exc', [
     (-1, ValueError),
     (2**63, ValueError),
     (True, TypeError),
     (1.5, TypeError),
 ], ids=['negative', 'too_large', 'bool', 'float'])
-def test_armc_seed_raise(seed: Any, exc: type[Exception]) -> None:
-    """Test that :class:`ARMC` rejects invalid seeds."""
-    with open(PATH / 'armc_ref.yaml', 'r') as f:
-        dct = yaml.load(f.read(), Loader=UniqueLoader)
-    armc, _ = dict_to_armc(dct)
-    kwargs = {k: getattr(armc, k) for k in ('phi', 'param', 'package_manager', 'molecule')}
+def test_armc_seed_raise(
+    seed: Any, exc: type[Exception], armc_kwargs: Tuple[type, Dict[str, Any]]
+) -> None:
+    """Test that :class:`ARMC` and the ``monte_carlo`` schema reject invalid seeds."""
+    cls, kwargs = armc_kwargs
     with pytest.raises(exc):
-        type(armc)(seed=seed, **kwargs)
-
-    dct['monte_carlo']['seed'] = seed
+        cls(seed=seed, **kwargs)
     with pytest.raises(SchemaError):
-        dict_to_armc(dct)
+        mc_schema.validate({'seed': seed})
+    assertion.eq(mc_schema.validate({'seed': 5})['seed'], 5)
 
 
 def test_hdf5_file_path(tmp_path: Path) -> None:
@@ -371,7 +388,10 @@ def test_param_sorting() -> None:
 
 
 @delete_finally(PATH / '_ARMC', PATH / '_ARMCPT')
-@pytest.mark.parametrize('name', ['armc_ref.yaml', 'armcpt_ref.yaml'])
+@pytest.mark.parametrize('name', [
+    'armc_ref.yaml',
+    pytest.param('armcpt_ref.yaml', marks=pytest.mark.slow),
+])
 def test_yaml_armc(name: str) -> None:
     """Tests for :meth:`FOX.armc.ARMC.to_yaml_dict`."""
     file = PATH / name
@@ -412,6 +432,7 @@ HAS_CP2K = _has_cp2k()
 
 
 @delete_finally(PATH / '_ARMC', PATH / '_ARMCPT')
+@pytest.mark.slow
 @pytest.mark.skipif(not HAS_CP2K, reason="Requires CP2K")
 @pytest.mark.parametrize('name,dir_name', [
     ('armc_cp2k.yaml', '_ARMC'),

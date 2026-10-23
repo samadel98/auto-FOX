@@ -95,7 +95,13 @@ jobs:
                 run: pip list
 
             -   name: Run tests
-                run: pytest -m "not slow"
+                run: |
+                    # The slow tests only run on one job, which also has CP2K
+                    if [[ "${{ matrix.os }}" == 'ubuntu-latest' && "${{ matrix.version }}" == '3.13' && -z "${{ matrix.special }}" ]]; then
+                        pytest
+                    else
+                        pytest -m "not slow"
+                    fi
 
             -   name: Run codecov
                 uses: codecov/codecov-action@v7
