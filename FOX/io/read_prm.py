@@ -68,6 +68,16 @@ SeriesIdx = Mapping[str, float]
 SeriesMultiIdx = Mapping[Tuple[str, ...], float]
 
 
+def _pad_rows(rows: list[list[str]]) -> list[list[None | str]]:
+    """Pad all **rows** with :data:`None` to the same length.
+
+    pandas deprecated padding rows of different lengths when constructing a DataFrame.
+
+    """
+    n = max((len(row) for row in rows), default=0)
+    return [row + [None] * (n - len(row)) for row in rows]
+
+
 class _PRMAttrTup(NamedTuple):
     """A :class:`~collections.namedtuple` representing :class:`PRMContainer` attributes."""
 
@@ -319,11 +329,9 @@ class PRMContainer(AbstractFileContainer):
                 kwargs[k] = ' '.join(chain.from_iterable(v)).split('!')[0].rstrip()
             elif k == 'nonbonded':
                 nonbonded_header = ' '.join(chain.from_iterable(v[0:2])).rstrip()
-                kwargs[k] = df = pd.DataFrame(v[2:])
-                cls._process_df(df, k)
+                kwargs[k] = cls._process_df(pd.DataFrame(_pad_rows(v[2:])), k)
             else:
-                kwargs[k] = df = pd.DataFrame(v)
-                cls._process_df(df, k)
+                kwargs[k] = cls._process_df(pd.DataFrame(_pad_rows(v)), k)
         kwargs['nonbonded_header'] = nonbonded_header
 
         for k, v in kwargs.items():
@@ -332,15 +340,15 @@ class PRMContainer(AbstractFileContainer):
                     kwargs[k] = None
 
     @classmethod
-    def _process_df(cls, df: pd.DataFrame, key: _DFNames) -> None:
-        """Fill in all columns, set their data type and assign an index to **df**."""
+    def _process_df(cls, df: pd.DataFrame, key: _DFNames) -> pd.DataFrame:
+        """Fill in all columns and set their data type, and return **df** with an index."""
         for i, default in enumerate(cls._COLUMNS[key]):
             if i not in df:
                 df[i] = default
             else:
                 default_type = str if default is None else type(default)
                 df[i] = df[i].astype(default_type)
-        df.set_index(cls._INDEX[key], inplace=True)
+        return df.set_index(cls._INDEX[key])
 
     """########################### methods for writing .prm files. ##############################"""
 
@@ -434,9 +442,8 @@ class PRMContainer(AbstractFileContainer):
         # Ensure that the attribute in question is a DataFrame and not None
         df = getattr(self, name)
         if df is None:
-            df = pd.DataFrame()
+            df = self._process_df(pd.DataFrame(), name)
             setattr(self, name, df)
-            self._process_df(df, name)
 
         # Parse and validate the columns
         param_df = pd.DataFrame(param, copy=True)
@@ -537,9 +544,8 @@ class PRMContainer(AbstractFileContainer):
         # Ensure that PRMContainter section is a DataFrame and not None
         df = getattr(self, name)
         if df is None:
-            df = pd.DataFrame()
+            df = self._process_df(pd.DataFrame(), name)
             setattr(self, name, df)
-            self._process_df(df, name)
 
         # Extract, parse and write the values
         for i, prm_dict in enumerate(prm_iter):

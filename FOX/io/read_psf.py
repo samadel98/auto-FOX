@@ -604,7 +604,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             if key == 'atoms':
                 df = pd.DataFrame(value)
                 df[0] = df[0].astype(int)
-                df.set_index(0, inplace=True)
+                df = df.set_index(0)
                 df.index.name = 'ID'
                 df.columns = ['segment name', 'residue ID', 'residue name',
                               'atom name', 'atom type', 'charge', 'mass', '0']
@@ -1277,8 +1277,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             ret = self.copy()
         else:
             ret = self
-        df = ret.atoms
-        df['_index'] = df.index
+        df = ret.atoms.assign(_index=ret.atoms.index)
 
         if isinstance(by, str):
             by = [by, '_index']
@@ -1286,10 +1285,11 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             by = list(by)
             by.append('_index')
 
-        df.sort_values(by, inplace=True, **kwargs)
+        df = df.sort_values(by, **kwargs)
         del df['_index']
+        ret.atoms = df
         argsort = np.append(0, df.index.values)
-        df.index = pd.RangeIndex(1, 1 + len(df), name=self.atoms.index.name)
+        df.index = pd.RangeIndex(1, 1 + len(df), name=df.index.name)
 
         # Update the residue ID
         res_id = df['residue ID']

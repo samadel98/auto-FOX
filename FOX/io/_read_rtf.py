@@ -314,8 +314,7 @@ class RTFContainer:
 
         # Convert the strucutred array into a dataframe
         df = pd.DataFrame(total_array)
-        df.set_index("molecule", inplace=True, drop=True)
-        return df
+        return df.set_index("molecule", drop=True)
 
     def _to_hdf5_dict(self) -> dict[str, NDArray[np.void]]:
         dct: dict[str, NDArray[np.void]] = {}
@@ -330,7 +329,7 @@ class RTFContainer:
                 dtype_list.append((sub_field, sub_dtype))
             dtype = np.dtype(dtype_list)
 
-            df: pd.DataFrame = getattr(self, name.lower()).reset_index(inplace=False, drop=False)
+            df: pd.DataFrame = getattr(self, name.lower()).reset_index(drop=False)
             dct[name] = df.to_records(index=False).astype(dtype)
         return dct
 
@@ -466,8 +465,7 @@ class RTFContainer:
                 else:
                     raise ValueError(f"{f.name!r}: {msg}") from ex
             df = pd.DataFrame(rec_array)
-            df.set_index("molecule" if k != "MASS" else "index", drop=True, inplace=True)
-            kwargs[k.lower()] = df
+            kwargs[k.lower()] = df.set_index("molecule" if k != "MASS" else "index", drop=True)
         return cls(charmm_version=version, auto=auto, **kwargs)
 
     def concatenate(self, rtf_iter: Iterable[RTFContainer]) -> Self:
@@ -499,7 +497,7 @@ class RTFContainer:
             "angles": pd.concat([self.angles] + [rtf.angles for rtf in rtf_list]),
             "dihe": pd.concat([self.dihedrals] + [rtf.dihedrals for rtf in rtf_list]),
         }
-        dct["mass"].drop_duplicates("atom_type", inplace=True, ignore_index=True)
+        dct["mass"] = dct["mass"].drop_duplicates("atom_type", ignore_index=True)
 
         cls = type(self)
         return cls(**dct)

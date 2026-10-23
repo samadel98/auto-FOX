@@ -585,9 +585,9 @@ class ParamMappingABC(AbstractDataClass, ABC):
                 if visited_key not in visited:
                     unit = self.metadata.at[(k, param, atom), (i, "unit")] or None
                     visited.add(visited_key)
-                    dct[k].at[param, "param"] = param
-                    dct[k].at[param, "unit"] = UNIT_MAP_REVERSED.get(unit, unit)
-                dct[k].at[param, atom] = v
+                    dct[k].loc[param, "param"] = param
+                    dct[k].loc[param, "unit"] = UNIT_MAP_REVERSED.get(unit, unit)
+                dct[k].loc[param, atom] = v
             ret.append(dct)
         return ret
 
