@@ -292,10 +292,21 @@ class ARMC(MonteCarloABC):
             return self._do_inner1(key_old, idx=idx)
 
         elif key_new in self:
+            # Undo the move first, so the new move is made from the current parameters
+            # rather than on top of the already visited ones
             self.logger.info("Recalculating move; move has already been visited")
+            self._undo_move(idx)
             return self._do_inner1(key_old, idx=idx)
 
         return key_new
+
+    def _undo_move(self, idx: None | int) -> None:
+        """Reset the parameters moved by :meth:`move` to their last accepted values."""
+        if self.param.is_independent:
+            i = idx or 0
+            self.param.param[i] = self.param.param_old[i]
+        else:
+            self.param.param[:] = self.param.param_old
 
     def _do_inner2(self) -> Tuple[PesDict, PesDict, Optional[MolList]]:
         """Calculate PES-descriptors."""

@@ -301,6 +301,28 @@ def test_armc_restart_seed(n_results: int, tmp_path: Path) -> None:
         np.testing.assert_array_equal(f1['phi'][:], f2['phi'][:])
 
 
+def test_armc_settings(tmp_path: Path) -> None:
+    """Test that the MD settings always hold the current parameters, also after a rejection."""
+    armc, job_kwargs = _get_seeded_armc('armc_ref.yaml', tmp_path, 'run', 1, n=1)
+    get_pes_descriptors = armc.get_pes_descriptors
+    n_checks = []
+
+    def check_settings(*args: Any, **kwargs: Any) -> Any:
+        settings = armc.package_manager['md'][0]['settings']
+        for (key, prm, atoms), value in armc.param.param[0].items():
+            df = settings[key]
+            if prm in df.index and atoms in df.columns:
+                assertion.isclose(float(df.at[prm, atoms]), value, message=f"{prm} {atoms}")
+        n_checks.append(None)
+        return get_pes_descriptors(*args, **kwargs)
+
+    armc.get_pes_descriptors = check_settings  # type: ignore[method-assign]
+    run_armc(armc, restart=False, **job_kwargs)
+    assertion.eq(len(n_checks), 21)
+    with h5py.File(tmp_path / 'run' / 'armc.hdf5', 'r') as f:
+        assertion.assert_(np.all, f['acceptance'][:], invert=True)
+
+
 @pytest.mark.parametrize('seed,exc', [
     (-1, ValueError),
     (2**63, ValueError),

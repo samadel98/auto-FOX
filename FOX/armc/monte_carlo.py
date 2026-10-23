@@ -449,11 +449,13 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         ret = self.param(logger=self.logger, param_idx=idx_)
         if isinstance(ret, Exception):
             return ret
-        else:
-            key, prm_name, _ = ret
 
-        prm_update = self.param.param.loc[(key, prm_name), idx_].to_frame().T
-        prm_update.index = [prm_name]
+        # Write all parameters to the job settings, not just the moved one,
+        # so that the settings also drop the values of earlier rejected moves
+        column = self.param.param[idx_]
+        prm_updates = {
+            k: column.loc[k].unstack() for k in column.index.get_level_values(0).unique()
+        }
         if idx is None:
             _iterator = chain.from_iterable(self.package_manager.values())
             iterator = (job['settings'] for job in _iterator)
@@ -462,7 +464,8 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
 
         # Update the job settings
         for settings in iterator:
-            settings[key].update(prm_update)
+            for k, prm_update in prm_updates.items():
+                settings[k].update(prm_update)
 
         return cast(Key, tuple(self.param.param[idx_].values))
 
