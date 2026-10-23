@@ -24,7 +24,7 @@ a :class:`FOX.MultiMolecule` instance.
 
 Other file formats
 ------------------
-Trajectories and structures in any format that `ASE <https://wiki.fysik.dtu.dk/ase/>`_
+Trajectories and structures in any format that `ASE <https://docs.ase-lib.org/>`_
 can read, such as extended .xyz, LAMMPS dump, .pdb or .cif files, can be read with
 :meth:`FOX.MultiMolecule.from_file`. This requires the ASE package.
 

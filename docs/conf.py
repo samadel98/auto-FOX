@@ -200,10 +200,10 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
-    'matplotlib': ('http://matplotlib.org', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
     'plams': ('https://www.scm.com/doc/plams/', None),
-    'ase': ('https://wiki.fysik.dtu.dk/ase/', None)
+    'ase': ('https://docs.ase-lib.org/', None)
 }
 
 
