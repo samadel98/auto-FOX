@@ -101,7 +101,7 @@ def main_armc2yaml(args: Optional[list] = None) -> None:
             i += 1
 
     with open(filename, 'r') as f:
-        dct_inp = yaml.safe_load(f.read())
+        dct_inp = yaml.load(f.read(), Loader=UniqueLoader)
     armc, kwargs = dict_to_armc(dct_inp)
 
     dct_out = armc.to_yaml_dict(
