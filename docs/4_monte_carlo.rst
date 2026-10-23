@@ -158,6 +158,17 @@ the parameter optimization can be started via the command prompt with:
 
 Previous caculations can be continued with :code:`init_armc my_settings.yaml --restart True`.
 
+The results of a (finished or still running) calculation can be summarized with
+:code:`armc_report path/to/armc.hdf5`.
+It prints the number of finished iterations, the acceptance rate, the lowest error and
+the parameters of the best iteration, writes the latter to ``best_param.csv`` and,
+if matplotlib is installed, plots the error per iteration and the PES descriptors of
+the best iteration against their reference.
+The files are written to a ``report`` directory next to the .hdf5 file unless
+another one is given with :code:`-o`.
+Use :code:`--validation` to pick the best iteration with the validation errors
+and :code:`--no-plots` to skip the plots.
+
 
 The pes block
 -------------

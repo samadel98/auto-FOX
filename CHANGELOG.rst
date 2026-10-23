@@ -22,6 +22,9 @@ Unreleased
 * Fix the MD runs of ARMC using the values of rejected moves.
 * Fix an ARMC move landing on a visited parameter set being redone on top of it.
 * Fix ``monte_carlo.hdf5_file`` in an existing directory raising a ``TypeError``.
+* Add the ``armc_report`` command, which summarizes and plots the results of an ARMC .hdf5 file.
+* Fix ``armc2yaml`` failing on the ``!!python/...`` tags that ``init_armc`` accepts.
+* Add ``MultiMolecule.from_file``, which reads any trajectory format supported by ASE.
 * Do not let a broken CAT install break ``import FOX``.
 * Test using CP2K 2026.2.
 

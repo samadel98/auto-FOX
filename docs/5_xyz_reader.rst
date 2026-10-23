@@ -22,10 +22,26 @@ a :class:`FOX.MultiMolecule` instance.
     <class 'FOX.classes.multi_mol.MultiMolecule'>
 
 
+Other file formats
+------------------
+Trajectories and structures in any format that `ASE <https://docs.ase-lib.org/>`_
+can read, such as extended .xyz, LAMMPS dump, .pdb or .cif files, can be read with
+:meth:`FOX.MultiMolecule.from_file`. This requires the ASE package.
+
+.. code:: python
+
+    >>> from FOX import MultiMolecule
+
+    >>> mol = MultiMolecule.from_file("md.lammpstrj")
+    >>> mol = MultiMolecule.from_file("md.dump", format="lammps-dump-text", index="::10")
+
+
 API
 ---
 .. autofunction:: FOX.io.read_xyz.read_multi_xyz
 .. automethod:: FOX.MultiMolecule.from_xyz
+    :noindex:
+.. automethod:: FOX.MultiMolecule.from_file
     :noindex:
 
 .. autodata:: FOX.example_xyz

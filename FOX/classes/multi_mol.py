@@ -2517,6 +2517,58 @@ class MultiMolecule(_MultiMolecule):
         return ret
 
     @classmethod
+    def from_file(
+        cls: Type[MT],
+        filename: str | os.PathLike[str],
+        format: None | str = None,
+        index: int | slice | str = ":",
+        **kwargs: Any,
+    ) -> MT:
+        r"""Construct a :class:`.MultiMolecule` instance from any file format that ASE can read.
+
+        Requires the ASE package.
+        The file is read with :func:`ase.io.read`, which supports trajectories and structures
+        in many formats, *e.g.* extended .xyz, LAMMPS dump, .pdb, .cif and CP2K .dcd files.
+        All frames must contain the same atoms in the same order.
+
+        Examples
+        --------
+        .. code:: python
+
+            >>> from FOX import MultiMolecule
+
+            >>> mol = MultiMolecule.from_file("md.lammpstrj")
+            >>> mol = MultiMolecule.from_file("md.dump", format="lammps-dump-text")
+
+        Parameters
+        ----------
+        filename : :term:`python:path-like object`
+            The path+filename of the file.
+        format : :class:`str`, optional
+            The ASE name of the file format, *e.g.* ``"extxyz"`` or ``"lammps-dump-text"``.
+            If :data:`None`, let ASE guess the format from the filename or file contents.
+        index : :class:`int`, :class:`slice` or :class:`str`
+            The frame(s) to read, *e.g.* ``-1`` for only the last frame or ``"::10"``
+            for every tenth frame. Reads all frames by default.
+        \**kwargs : :data:`~typing.Any`
+            Further keyword arguments for :func:`ase.io.read`.
+
+        Returns
+        -------
+        :class:`FOX.MultiMolecule`
+            A molecule constructed from **filename**.
+
+        """
+        if ASE_EX is not None:
+            raise ASE_EX
+        from ase.io import read
+
+        mol_list = read(filename, index=index, format=format, **kwargs)
+        ret = cls.from_ase(mol_list)
+        ret.properties['filename'] = filename
+        return ret
+
+    @classmethod
     def from_kf(cls: Type[MT], filename: Union[str, 'PathLike[str]'],
                 bonds: Optional[np.ndarray] = None,
                 properties: Optional[dict] = None) -> MT:
