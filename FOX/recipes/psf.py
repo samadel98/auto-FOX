@@ -283,7 +283,8 @@ def extract_ligand(
     # Construct a ligand
     j = i + ligand_len
     ligand = Molecule()
-    ligand.atoms = [Atom(atnum=at.atnum, coords=at.coords, mol=ligand) for at in qd.atoms[i:j]]
+    for at in qd.atoms[i:j]:
+        ligand.add_atom(Atom(atnum=at.atnum, coords=at.coords))
     ligand.guess_bonds()
 
     return ligand
@@ -420,12 +421,13 @@ def _get_initial_lig(
     """Construct a new ligand at the begining of the :func:`generate_psf2` ``while`` loop."""
     _, j = next(iter(rdmol_dict.items()))
     new = Molecule()
-    new.atoms = [Atom(atnum=at.atnum, coords=at.coords, mol=new) for at in qd.atoms[i:i+j]]
+    for at in qd.atoms[i:i+j]:
+        new.add_atom(Atom(atnum=at.atnum, coords=at.coords))
 
     if not new:
         return None, j
-    elif len(new) != j:  # Pad with dummy atoms
-        new.atoms += [Atom(atnum=0, coords=[0, 0, 0], mol=new) for _ in range(j - len(new))]
+    for _ in range(j - len(new)):  # Pad with dummy atoms
+        new.add_atom(Atom(atnum=0, coords=[0, 0, 0]))
 
     new.set_atoms_id(start=i+1)
     return new, j

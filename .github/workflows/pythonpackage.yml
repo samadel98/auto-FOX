@@ -71,9 +71,11 @@ jobs:
                 run: |
                     if [[ "${{ matrix.special }}" == '; pre-release' ]]; then
                         pip install --pre -e .[test-no-optional] --upgrade --force-reinstall
-                        # Not PLAMS master: it has dropped `ADFJob`, which QMFlows still needs
-                        pip install git+https://github.com/SCM-NV/qmflows@master --upgrade
+                        # The QMFlows fork and the newest PLAMS: no QMFlows release supports PLAMS >= 2024 yet,
+                        # hence the `plams<2024` cap in pyproject.toml
+                        pip install git+https://github.com/samadel98/qmflows@master --upgrade
                         pip install git+https://github.com/NLeSC/noodles@master --upgrade
+                        pip install --pre plams rdkit --upgrade
                     elif [[ $SPECIAL"${{ matrix.special }}" == '; minimum version' ]]; then
                         pip install -r ./test_requirement_min_version.txt
                         # Use the minimum versions as constraints so that no other package can upgrade them
@@ -93,7 +95,13 @@ jobs:
                 run: pip list
 
             -   name: Run tests
-                run: pytest -m "not slow"
+                run: |
+                    # The slow tests only run on one job, which also has CP2K
+                    if [[ "${{ matrix.os }}" == 'ubuntu-latest' && "${{ matrix.version }}" == '3.13' && -z "${{ matrix.special }}" ]]; then
+                        pytest
+                    else
+                        pytest -m "not slow"
+                    fi
 
             -   name: Run codecov
                 uses: codecov/codecov-action@v7

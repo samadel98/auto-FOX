@@ -124,9 +124,9 @@ def dict_to_armc(input_dict: MainMapping) -> Tuple[MonteCarloABC, RunDict]:
     param._net_charge_to_integer()
 
     # Sort the index
-    mc.param.param.sort_index(inplace=True)
-    mc.param.param_old.sort_index(inplace=True)
-    mc.param.metadata.sort_index(inplace=True)
+    mc.param.param = mc.param.param.sort_index()
+    mc.param.param_old = mc.param.param_old.sort_index()
+    mc.param.metadata = mc.param.metadata.sort_index()
 
     # Update the job settings
     mc.package_manager.update_settings(mc.param.get_cp2k_dicts())
@@ -360,7 +360,7 @@ def get_param(dct: ParamMapping_) -> Tuple[ParamMapping, dict, dict, ValidationD
             data2['unit'] = units2
             data2['frozen'] = True
             data = pd.concat([data, data2])
-    data.sort_index(inplace=True)
+    data = data.sort_index()
 
     param_type = prm_dict.pop('type')  # type: ignore
     return (  # type: ignore[return-value]
@@ -566,7 +566,7 @@ def _get_param_df(dct: Mapping[str, Any]) -> pd.DataFrame:
 
     df = pd.DataFrame(data, columns=columns)
     _sort_atoms(df)
-    df.set_index(['key', 'param_type', 'atoms'], inplace=True)
+    df = df.set_index(['key', 'param_type', 'atoms'])
 
     df['param_old'] = df['param'].copy()
     df['frozen'] = False

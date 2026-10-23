@@ -230,26 +230,25 @@ def constrained_update(
 
     # Update the charge of all other charge-constraint blocks
     coef_iterator = (coef for coef in atom_coefs if coef is not ref_coef)
-    with pd.option_context('mode.chained_assignment', None):
-        for coef in coef_iterator:
-            # Identify the to-be considered slice
-            idx = coef.index
-            idx_ref += idx.tolist()
+    for coef in coef_iterator:
+        # Identify the to-be considered slice
+        idx = coef.index
+        idx_ref += idx.tolist()
 
-            # Update the charges
-            df_kwargs = df.loc[idx]
-            df_kwargs["count"] = coef
+        # Update the charges
+        df_kwargs = df.loc[idx].copy()
+        df_kwargs["count"] = coef
 
-            # NOTE: Explicitly keep a reference to the inplace-updated `param` series,
-            # as with copy-on-write the update is not propagated back to `df_kwargs`
-            prm = df_kwargs["param"]
-            unconstrained_update(
-                net_charge, prm, df_kwargs["count"],
-                prm_min=df_kwargs["prm_min"], prm_max=df_kwargs["prm_max"],
-                exclude=exclude_set,
-            )
-            param.loc[idx] = prm
-            exclude_set.update(idx.intersection(idx_ref))
+        # NOTE: Explicitly keep a reference to the inplace-updated `param` series,
+        # as with copy-on-write the update is not propagated back to `df_kwargs`
+        prm = df_kwargs["param"]
+        unconstrained_update(
+            net_charge, prm, df_kwargs["count"],
+            prm_min=df_kwargs["prm_min"], prm_max=df_kwargs["prm_max"],
+            exclude=exclude_set,
+        )
+        param.loc[idx] = prm
+        exclude_set.update(idx.intersection(idx_ref))
 
 
 def _update_1st_charge(
@@ -312,7 +311,7 @@ def unconstrained_update(
     s = param * i
     s_clip = np.clip(s, s_min, s_max).loc[include]
     s_delta = abs(s_clip - s.loc[include])
-    s_delta.sort_values(ascending=False, inplace=True)
+    s_delta = s_delta.sort_values(ascending=False)
 
     start = -len(s_delta) + 1
     for j, atom in enumerate(s_delta.index, start=start):

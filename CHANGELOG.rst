@@ -25,6 +25,10 @@ Unreleased
 * Add the ``armc_report`` command, which summarizes and plots the results of an ARMC .hdf5 file.
 * Fix ``armc2yaml`` failing on the ``!!python/...`` tags that ``init_armc`` accepts.
 * Add ``MultiMolecule.from_file``, which reads any trajectory format supported by ASE.
+* Fix the psf recipes on PLAMS >= 2024. PLAMS stays capped below 2024 until a QMFlows
+  release supports the newer PLAMS versions.
+* Stop using pandas features that pandas 4 will remove.
+* Add a ``slow`` pytest marker: ``pytest -m "not slow"`` skips the slowest tests.
 * Do not let a broken CAT install break ``import FOX``.
 * Test using CP2K 2026.2.
 

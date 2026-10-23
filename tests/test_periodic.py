@@ -15,7 +15,7 @@ class TestParsePeriodic:
 
     @pytest.mark.parametrize(
         "xyz",
-        chain(
+        list(chain(
             ["xyz", "zxxyxyyzzyz", "x", "y", "z", 0, 1, 2],
             combinations("xyz", r=1),
             combinations("xyz", r=2),
@@ -24,7 +24,7 @@ class TestParsePeriodic:
             combinations(range(3), r=2),
             combinations(range(3), r=3),
             [np.arange(3), np.array(["x", "y", "z"])],
-        )
+        ))
     )
     def test_pass(self, xyz: Any) -> None:
         out = parse_periodic(xyz)

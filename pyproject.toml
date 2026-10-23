@@ -154,6 +154,9 @@ max-line-length = 100
 
 [tool.pytest.ini_options]
 testpaths = "FOX tests"
+markers = [
+    "slow: slow tests; skip them with `pytest -m 'not slow'`",
+]
 addopts = "--tb=short --cov=FOX --cov-report xml --cov-report term --cov-report html --pdbcls=IPython.terminal.debugger:TerminalPdb"
 filterwarnings = [
     "ignore::pandas.errors.PerformanceWarning",

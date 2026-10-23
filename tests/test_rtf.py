@@ -46,7 +46,7 @@ class TestRTFContainer:
     @pytest.mark.parametrize("name", DF_NAMES)
     def test_attribute(self, rtf: RTFContainer, name: str) -> None:
         name = name.upper()
-        df: pd.DataFrame = getattr(rtf, name.lower()).reset_index(inplace=False, drop=False)
+        df: pd.DataFrame = getattr(rtf, name.lower()).reset_index(drop=False)
         with h5py.File(PATH / "test_ref.hdf5", "r") as f:
             dtype = rtf.DTYPES[name]
             ref = f[f"test_rtf/TestRTFContainer/test_attribute/{name}"][...].astype(dtype)
