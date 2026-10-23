@@ -92,8 +92,8 @@ def swap_random(acceptance: np.ndarray, armcpt: "ARMCPT",
     p /= p.sum()  # normalize
 
     idx_range = np.arange(len(p))
-    idx1 = np.random.choice(idx_range, p=p)
-    idx2 = np.random.choice(idx_range, p=p)
+    idx1 = self.rng.choice(idx_range, p=p)
+    idx2 = self.rng.choice(idx_range, p=p)
 
     if idx1 != idx2:
         self.logger.info(f"Swapping parameter sets {idx1} and {idx2}")

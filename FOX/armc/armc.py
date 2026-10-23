@@ -16,6 +16,7 @@ API
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 from itertools import repeat
 from typing import (
@@ -155,6 +156,7 @@ class ARMC(MonteCarloABC):
             'folder': folder,
             'logfile': logfile,
             'hdf5_file': self.hdf5_file,
+            'seed': self.seed,
         }
 
         # Parse the `pes` and `pes_validation` blocks
@@ -420,7 +422,9 @@ class ARMC(MonteCarloABC):
         for k, v in pes_validation.items():
             hdf5_kwarg[f'validation/{k}'] = v
 
-        to_hdf5(self.hdf5_file, hdf5_kwarg, kappa, omega)
+        # Store the state of the random number generator so a restart continues the same moves
+        rng_state = json.dumps(self.rng.bit_generator.state)
+        to_hdf5(self.hdf5_file, hdf5_kwarg, kappa, omega, attrs={'rng_state': rng_state})
 
     def get_aux_error(self, pes_dict: PesMapping, validation: bool = False) -> np.ndarray:
         r"""Return the auxiliary error :math:`\Delta \varepsilon_{QM-MM}`.
@@ -527,6 +531,11 @@ class ARMC(MonteCarloABC):
             self.param.param[:] = f['param'][i, j].T
             self.param.param_old[:] = self.param.param
             acceptance = f['acceptance'][:i+1]
+
+            # Continue with the random moves where the previous run stopped.
+            # Files written before Auto-FOX stored this state get freshly seeded moves.
+            if 'rng_state' in f.attrs:
+                self.rng.bit_generator.state = json.loads(f.attrs['rng_state'])
 
             # Find the last iteration that is not np.nan
             final_key: List[Key] = self._find_restart_key(acceptance, param[:ij])

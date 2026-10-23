@@ -142,12 +142,16 @@ class ParamMappingABC(AbstractDataClass, ABC):
     _net_charge : :class:`float`, optional
         The net charge of the molecular system.
         Only applicable if the ``"charge"`` is among the passed parameters.
+    rng : :class:`numpy.random.Generator`
+        The random number generator used for picking moves.
+        Set by :class:`~FOX.armc.MonteCarloABC` to its own (seeded) generator.
 
     """
 
     _net_charge: Optional[np.ndarray]
     _move_range: np.ndarray
     _is_independent: bool
+    rng: np.random.Generator
 
     #: Fill values for when optional keys are absent.
     FILL_VALUE: ClassVar[MappingProxyType[MetadataKeys, np.generic]] = MappingProxyType({
@@ -159,7 +163,7 @@ class ParamMappingABC(AbstractDataClass, ABC):
         'unit': np.str_(''),
     })
 
-    _PRIVATE_ATTR = frozenset({'_net_charge'})  # type: ignore
+    _PRIVATE_ATTR = frozenset({'_net_charge', 'rng'})  # type: ignore
 
     def __init__(
         self,
@@ -213,6 +217,7 @@ class ParamMappingABC(AbstractDataClass, ABC):
         self.func: Callable[[float, float], float] = wraps(func)(partial(func, **kwargs))
         self.constraints = cast(Dict[Tup2, Optional[Tuple[pd.Series, ...]]], constraints)
         self._is_independent = is_independent
+        self.rng = np.random.default_rng()
 
     # Properties
 
@@ -625,11 +630,11 @@ class ParamMapping(ParamMappingABC):
         """  # noqa
         # Define a random parameter
         variable = ~self.metadata[param_idx, 'frozen']
-        random_prm: pd.Series = self.param.loc[variable, param_idx].sample()
+        random_prm: pd.Series = self.param.loc[variable, param_idx].sample(random_state=self.rng)
         idx, x1 = next(random_prm.items())  # Type: Tup3, float
 
         # Define a random move size
-        x2: float = np.random.choice(self.move_range[param_idx], 1)[0]
+        x2: float = self.rng.choice(self.move_range[param_idx])
         return idx, x1, x2
 
     def clip_move(self, idx: Tup3, value: float, param_idx: int) -> np.float64:

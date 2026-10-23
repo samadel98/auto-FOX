@@ -34,7 +34,7 @@ from nanoutils import (
 )
 
 from .armc import ARMC
-from .monte_carlo import MonteCarloABC
+from .monte_carlo import MonteCarloABC, MAX_SEED
 from .package_manager import PackageManager, PackageManagerABC
 from .phi_updater import PhiUpdater, PhiUpdaterABC
 from .param_mapping import ParamMapping, ParamMappingABC
@@ -238,7 +238,20 @@ mc_schema = Schema({
         And(None, Default(True)),
         bool,
         error=Formatter(f"'monte_carlo.keep_files' expected a boolean{EPILOG}")
-    )
+    ),
+
+    Optional_('seed', default=None): Or(
+        None,
+        And(
+            lambda n: not isinstance(n, (bool, np.bool_)),
+            supports_int,
+            lambda n: 0 <= int(n) <= MAX_SEED,
+            Use(int),
+        ),
+        error=Formatter(
+            f"'monte_carlo.seed' expected an integer in [0, {MAX_SEED}] or None{EPILOG}"
+        )
+    ),
 }, name='mc_schema', description='Schema for validating the "monte_carlo" block.')
 
 
@@ -253,6 +266,7 @@ class MCMapping(TypedDict, total=False):
     path: Union[None, str, bytes, os.PathLike]
     folder: Union[None, str, bytes, os.PathLike]
     keep_files: Optional[bool]
+    seed: Union[None, str, bytes, SupportsInt]
 
 
 class MCDict(TypedDict):
@@ -266,6 +280,7 @@ class MCDict(TypedDict):
     path: str
     folder: str
     keep_files: bool
+    seed: Optional[int]
 
 
 #: Schema for validating the ``"psf"`` block.
