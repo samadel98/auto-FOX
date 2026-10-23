@@ -16,6 +16,7 @@ API
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 from itertools import repeat
 from typing import (
@@ -155,6 +156,7 @@ class ARMC(MonteCarloABC):
             'folder': folder,
             'logfile': logfile,
             'hdf5_file': self.hdf5_file,
+            'seed': self.seed,
         }
 
         # Parse the `pes` and `pes_validation` blocks
@@ -215,7 +217,11 @@ class ARMC(MonteCarloABC):
 
             for omega in range(self.sub_iter_len):
                 key_new = self.do_inner(kappa, omega, acceptance, key_new)
-            self.phi.update(acceptance)
+            self._end_super_iter(acceptance)
+
+    def _end_super_iter(self, acceptance: np.ndarray) -> None:
+        r"""Update :math:`\phi` at the end of a super-iteration."""
+        self.phi.update(acceptance)
 
     @overload
     def _parse_call(self, start: None = ..., key_new: None = ...) -> Key: ...
@@ -286,10 +292,21 @@ class ARMC(MonteCarloABC):
             return self._do_inner1(key_old, idx=idx)
 
         elif key_new in self:
+            # Undo the move first, so the new move is made from the current parameters
+            # rather than on top of the already visited ones
             self.logger.info("Recalculating move; move has already been visited")
+            self._undo_move(idx)
             return self._do_inner1(key_old, idx=idx)
 
         return key_new
+
+    def _undo_move(self, idx: None | int) -> None:
+        """Reset the parameters moved by :meth:`move` to their last accepted values."""
+        if self.param.is_independent:
+            i = idx or 0
+            self.param.param[i] = self.param.param_old[i]
+        else:
+            self.param.param[:] = self.param.param_old
 
     def _do_inner2(self) -> Tuple[PesDict, PesDict, Optional[MolList]]:
         """Calculate PES-descriptors."""
@@ -420,7 +437,9 @@ class ARMC(MonteCarloABC):
         for k, v in pes_validation.items():
             hdf5_kwarg[f'validation/{k}'] = v
 
-        to_hdf5(self.hdf5_file, hdf5_kwarg, kappa, omega)
+        # Store the state of the random number generator so a restart continues the same moves
+        rng_state = json.dumps(self.rng.bit_generator.state)
+        to_hdf5(self.hdf5_file, hdf5_kwarg, kappa, omega, attrs={'rng_state': rng_state})
 
     def get_aux_error(self, pes_dict: PesMapping, validation: bool = False) -> np.ndarray:
         r"""Return the auxiliary error :math:`\Delta \varepsilon_{QM-MM}`.
@@ -486,7 +505,7 @@ class ARMC(MonteCarloABC):
         j += 1
         for omega in range(j, self.sub_iter_len):
             key = self.do_inner(i, omega, acceptance, key)
-        self.phi.update(acceptance)
+        self._end_super_iter(acceptance)
         i += 1
 
         # And continue
@@ -496,7 +515,7 @@ class ARMC(MonteCarloABC):
         """Read and process the .hdf5 file for :meth:`ARMC.restart`."""
         with h5py.File(self.hdf5_file, 'r', libver='latest') as f:
             i, j = f.attrs['super-iteration'], f.attrs['sub-iteration']
-            ij = j + 1 + i * len(f['param'])
+            ij = j + 1 + i * f['param'].shape[1]  # The number of finished iterations
             if i < 0:
                 raise ValueError(f'i: {i.__class__.__name__} = {i}')
             self.logger.info('Restarting ARMC procedure from super-iteration '
@@ -524,12 +543,18 @@ class ARMC(MonteCarloABC):
                         pass
 
             self.phi.phi = f['phi'][i]
-            self.param.param[:] = f['param'][i, j].T
-            self.param.param_old[:] = self.param.param
             acceptance = f['acceptance'][:i+1]
 
-            # Find the last iteration that is not np.nan
+            # Continue with the random moves where the previous run stopped.
+            # Files written before Auto-FOX stored this state get freshly seeded moves.
+            if 'rng_state' in f.attrs:
+                self.rng.bit_generator.state = json.loads(f.attrs['rng_state'])
+
+            # Find the last accepted parameters and continue from those.
+            # `f['param'][i, j]` holds the latest *proposed* parameters, which may be rejected.
             final_key: List[Key] = self._find_restart_key(acceptance, param[:ij])
+            self.param.param[:] = np.array(final_key, dtype=np.float64).T
+            self.param.param_old[:] = self.param.param
         return i, j, final_key, acceptance[i]
 
     @staticmethod

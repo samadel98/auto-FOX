@@ -17,6 +17,11 @@ Unreleased
 * Fix the ARMC input validation with schema >= 0.7.5.
 * Fix ``filter_atoms`` on NumPy >= 1.24 and for identical-atom pairs.
 * Fix ``init_armc --restart False`` restarting anyway.
+* Add the ``monte_carlo.seed`` option, making ARMC runs reproducible.
+* Fix ARMC restarts continuing from older or rejected parameters.
+* Fix the MD runs of ARMC using the values of rejected moves.
+* Fix an ARMC move landing on a visited parameter set being redone on top of it.
+* Fix ``monte_carlo.hdf5_file`` in an existing directory raising a ``TypeError``.
 * Do not let a broken CAT install break ``import FOX``.
 * Test using CP2K 2026.2.
 

@@ -16,6 +16,8 @@ API
 from __future__ import annotations
 
 import copy
+import secrets
+import operator
 import warnings
 from os import PathLike
 from abc import ABC, abstractmethod
@@ -53,6 +55,9 @@ PostProcess = Callable[[Optional[Iterable[MultiMolecule]], Optional['MonteCarloA
 GetPesDescriptor = Callable[[MultiMolecule, Result], ArrayOrScalar]
 Key = Tuple[float, ...]
 
+#: The largest allowed random seed; seeds are stored as 64-bit signed integers in the .hdf5 file.
+MAX_SEED = 2**63 - 1
+
 
 def _template_func1(_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     _mol, _, *args = args
@@ -75,6 +80,17 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
     pes_validation: Dict[str, GetPesDescriptor]
     swap_phi: Optional[Callable[..., Any]]
     HAS_LOOP: ClassVar[bool] = False
+    _PRIVATE_ATTR = frozenset({'_rng'})  # type: ignore
+
+    @property
+    def seed(self) -> int:
+        """Get the seed of the random number generator used for the Monte Carlo moves."""
+        return self._seed
+
+    @property
+    def rng(self) -> np.random.Generator:
+        """Get the random number generator used for the Monte Carlo moves."""
+        return self._rng
 
     @property
     def molecule(self) -> Tuple[MultiMolecule, ...]:
@@ -116,14 +132,33 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
                  hdf5_file: Union[str, PathLike] = 'armc.hdf5',
                  logger: Optional[Logger] = None,
                  pes_post_process: Optional[Iterable[PostProcess]] = None,
+                 seed: Optional[int] = None,
                  **kwargs: Any) -> None:
-        """Initialize a :class:`MonteCarlo` instance."""
+        """Initialize a :class:`MonteCarlo` instance.
+
+        **seed** is the seed of the random number generator used for picking moves;
+        a random seed is drawn if ``None``.
+        Running the same input with the same seed gives the same sequence of moves.
+
+        """
         if kwargs:
             name = next(iter(kwargs))
             raise TypeError(f"Unexpected argument {name!r}")
         super().__init__()
 
+        if seed is None:
+            seed = secrets.randbits(63)
+        elif isinstance(seed, (bool, np.bool_)):
+            raise TypeError("'seed' expected an integer; observed type: 'bool'")
+        seed = operator.index(seed)
+        if not 0 <= seed <= MAX_SEED:
+            raise ValueError(f"'seed' expected an integer in [0, {MAX_SEED}]; "
+                             f"observed value: {seed!r}")
+        self._seed = seed
+        self._rng = np.random.default_rng(seed)
+
         self.param = param
+        self.param.rng = self._rng
 
         # Settings for running the actual MD calculations
         self.molecule = cast(Tuple[MultiMolecule, ...], molecule)
@@ -414,11 +449,13 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         ret = self.param(logger=self.logger, param_idx=idx_)
         if isinstance(ret, Exception):
             return ret
-        else:
-            key, prm_name, _ = ret
 
-        prm_update = self.param.param.loc[(key, prm_name), idx_].to_frame().T
-        prm_update.index = [prm_name]
+        # Write all parameters to the job settings, not just the moved one,
+        # so that the settings also drop the values of earlier rejected moves
+        column = self.param.param[idx_]
+        prm_updates = {
+            k: column.loc[k].unstack() for k in column.index.get_level_values(0).unique()
+        }
         if idx is None:
             _iterator = chain.from_iterable(self.package_manager.values())
             iterator = (job['settings'] for job in _iterator)
@@ -427,7 +464,8 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
 
         # Update the job settings
         for settings in iterator:
-            settings[key].update(prm_update)
+            for k, prm_update in prm_updates.items():
+                settings[k].update(prm_update)
 
         return cast(Key, tuple(self.param.param[idx_].values))
 

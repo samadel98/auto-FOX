@@ -416,7 +416,7 @@ def get_armc(dct: MCMapping,
     if not os.path.isdir(os.path.dirname(hdf5)):
         mc_dict['hdf5_file'] = os.path.join(workdir, hdf5)
     else:
-        kwargs['hdf5_file'] = os.path.abspath(hdf5)
+        mc_dict['hdf5_file'] = os.path.abspath(hdf5)
 
     mc_type = mc_dict.pop('type')  # type: ignore
     return mc_type(phi=phi, param=param, package_manager=package_manager,

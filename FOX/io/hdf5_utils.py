@@ -105,6 +105,7 @@ def create_hdf5(filename: PathType, armc: ARMC) -> None:
 
         f.attrs['super-iteration'] = -1
         f.attrs['sub-iteration'] = -1
+        f.attrs['seed'] = np.int64(armc.seed)
         f.attrs['__version__'] = np.fromiter(Version(__version__).release, dtype=np.int64)
 
         commit_hash = get_commit_hash(Path(_fox_file).parents[1])
@@ -411,7 +412,7 @@ def hdf5_availability(filename: PathType, timeout: float = 5.0,
 
 
 def to_hdf5(filename: PathType, dset_dict: Mapping[str, np.ndarray],
-            kappa: int, omega: int) -> None:
+            kappa: int, omega: int, attrs: Optional[Mapping[str, Any]] = None) -> None:
     r"""Export results from **dset_dict** to the hdf5 file **filename**.
 
     All items in **dset_dict**, except ``"xyz"``, are exported to **filename**.
@@ -431,6 +432,9 @@ def to_hdf5(filename: PathType, dset_dict: Mapping[str, np.ndarray],
 
     omega : int
         The sub-iteration, :math:`\omega`, in the inner loop of :meth:`.ARMC.__call__`.
+
+    attrs : dict [str, object], optional
+        File attributes to set together with the iteration counters.
 
     """
     # Check if the hdf5 file is already opened. If opened: wait for 5 sec and try again.
@@ -452,6 +456,8 @@ def to_hdf5(filename: PathType, dset_dict: Mapping[str, np.ndarray],
                 raise RuntimeError(f'Failed to write dataset {key!r}') from ex
         f.attrs['super-iteration'] = kappa
         f.attrs['sub-iteration'] = omega
+        for key, value in (attrs or {}).items():
+            f.attrs[key] = value
 
     # Update the second hdf5 file with Cartesian coordinates
     filename_xyz = _get_filename_xyz(filename)

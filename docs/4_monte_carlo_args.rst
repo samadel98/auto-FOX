@@ -95,6 +95,7 @@ Index
     :attr:`monte_carlo.path`                    The path to the ARMC working directory.
     :attr:`monte_carlo.folder`                  The name of the ARMC working directory.
     :attr:`monte_carlo.keep_files`              Whether to keep *all* raw output files or not.
+    :attr:`monte_carlo.seed`                    The seed of the random number generator used for the moves.
     =========================================== ===================================================================================================================
 
 .. table::
@@ -721,6 +722,7 @@ Settings related to the Monte Carlo procedure itself.
             path: .
             folder: MM_MD_workdir
             keep_files: False
+            seed: 42
 
 |
 
@@ -791,9 +793,25 @@ Settings related to the Monte Carlo procedure itself.
     .. attribute:: monte_carlo.keep_files
 
         :Parameter:     * **Type** - :class:`bool`
-                        * **Default Value** - ``"False"``
+                        * **Default Value** - ``True``
 
         Whether to keep *all* raw output files or not.
+
+
+    .. attribute:: monte_carlo.seed
+
+        :Parameter:     * **Type** - :class:`int`, optional
+                        * **Default Value** - ``None``
+
+        The seed of the random number generator that picks the moves:
+        a non-negative integer smaller than :math:`2^{63}`.
+        Two runs with the same input and seed make the same moves.
+
+        If ``None``, a random seed is drawn.
+        Either way the seed is stored in the ``"seed"`` attribute of the .hdf5 file,
+        so any run can be repeated afterwards.
+        The state of the random number generator is stored in the .hdf5 file as well,
+        so a restarted run continues with the same moves as an uninterrupted one.
 
 
 .. _monte_carlo_parameters.phi:
