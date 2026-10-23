@@ -56,7 +56,11 @@ def fix_bond_orders(mol: Molecule) -> None:
     for at in mol:
         charge = at.properties.charge
         if isinstance(charge, float) and charge.is_integer():
-            at.properties.charge = int(charge)
+            charge = at.properties.charge = int(charge)
+
+        # PLAMS >= 2024 reads the formal charge from `rdkit.charge` when converting to RDKit
+        if isinstance(charge, int):
+            at.properties.rdkit.charge = charge
 
 
 def separate_mod(mol: Molecule) -> List[List[int]]:
