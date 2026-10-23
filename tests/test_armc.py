@@ -343,6 +343,18 @@ def test_armc_seed_raise(seed: Any, exc: type[Exception]) -> None:
         dict_to_armc(dct)
 
 
+def test_hdf5_file_path(tmp_path: Path) -> None:
+    """Test that an ``monte_carlo.hdf5_file`` in an existing directory is passed to ARMC."""
+    with open(PATH / 'armc_ref.yaml', 'r') as f:
+        dct = yaml.load(f.read(), Loader=UniqueLoader)
+    hdf5_file = tmp_path / 'results.hdf5'
+    dct['monte_carlo']['hdf5_file'] = str(hdf5_file)
+
+    armc, job_kwargs = dict_to_armc(dct)
+    assertion.eq(armc.hdf5_file, str(hdf5_file))
+    assertion.contains(job_kwargs, 'hdf5_file', invert=True)
+
+
 def test_param_sorting() -> None:
     """Tests for :func:`FOX.armc.sanitization._sort_atoms`"""
     df1 = DF.copy()
