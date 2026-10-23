@@ -46,6 +46,7 @@ You want to make some kind of change to the code base
 3. If needed, fork the repository to your own Github profile and create your own feature branch off of the latest master commit. While working on your feature branch, make sure to stay up to date with the master branch by pulling in changes, possibly from the 'upstream' repository (follow the instructions `here <https://help.github.com/articles/configuring-a-remote-for-a-fork/>`__ and `here <https://help.github.com/articles/syncing-a-fork/>`__).
 
 4. Make sure the existing tests still work: install the package with ``pip install -e .[test]`` and run ``pytest``.
+   ``pytest -m "not slow"`` skips the slowest tests, which CI runs on one job only.
    The ARMC tests also need the test data package (``pip install https://github.com/nlesc-nano/auto-FOX-data/releases/download/1.2.0/Auto_FOX_Data-1.2.0-py3-none-any.whl``),
    and ``tests/test_armc.py::test_with_cp2k`` only runs when ``cp2k.ssmp`` is on your ``PATH``.
    Check the code style with ``pip install -e .[lint]``, ``flake8 FOX tests`` and ``pydocstyle FOX``.
