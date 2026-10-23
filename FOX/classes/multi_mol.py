@@ -20,8 +20,6 @@ import os
 import copy
 import operator
 import warnings
-import functools
-import sys
 from os import PathLike
 from collections import abc, defaultdict
 from itertools import (
@@ -2183,10 +2181,6 @@ class MultiMolecule(_MultiMolecule):
         for (sub_symbol, (super_symbol, idx)) in self.atoms_alias.items():
             symbols[self.atoms[super_symbol][idx]] = sub_symbol
 
-        if TYPE_CHECKING:
-            strict_zip = zip
-        else:
-            strict_zip = functools.partial(zip, strict=True) if sys.version_info >= (3, 10) else zip
         with open(filename, "w", encoding="utf8") as f:
             f.write(f"{header}\n")
             f.write(f"{self.shape[1]}\n")
@@ -2203,7 +2197,7 @@ class MultiMolecule(_MultiMolecule):
                     f"observed min: {coords_min * 10}"
                 )
 
-            iterator = enumerate(strict_zip(symbols, coords))
+            iterator = enumerate(zip(symbols, coords, strict=True))
             for (i, (symbol, (x, y, z))) in iterator:
                 i = 1 + i % 99999
                 f.write((f"{1:5d}{'':5s}{symbol:>5s}{i:5d}{x:8.3f}{y:8.3f}{z:8.3f}\n"))

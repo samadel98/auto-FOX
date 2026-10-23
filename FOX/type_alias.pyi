@@ -1,10 +1,4 @@
-import sys
-from typing import Mapping, List
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from typing import Mapping, List, Literal
 
 _Keys = Literal[
     'MultiMolecule', 'FrozenSettings', 'PRMContainer', 'PSFContainer', 'MonteCarloABC', 'ARMC',

@@ -1,14 +1,8 @@
-import sys
-from typing import Any, Union, Callable, overload, TypeVar, Iterable
+from typing import Any, Union, Callable, overload, TypeVar, Iterable, Protocol, Literal
 
 from FOX import MultiMolecule
 import numpy as np
 import numpy.typing as npt
-
-if sys.version_info >= (3, 8):
-    from typing import Protocol, Literal
-else:
-    from typing_extensions import Protocol, Literal
 
 _SCT1 = TypeVar("_SCT1", bound=np.generic)
 _SCT2 = TypeVar("_SCT2", bound=np.generic)

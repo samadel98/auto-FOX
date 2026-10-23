@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 This project adheres to `Semantic Versioning <http://semver.org/>`_.
 
 
+Unreleased
+**********
+* Drop support for Python 3.8 and 3.9; Python 3.10 is now the minimum.
+* Raise the minimum versions of NumPy (1.21.2), SciPy (1.7.2), h5py (3.6.0) and PyYAML (6.0),
+  the oldest releases with Python 3.10 wheels.
+* Add support for NumPy 2, pandas 2 and 3, and Python 3.12, 3.13 and 3.14.
+* Fix updates being silently lost under pandas copy-on-write.
+* Make the ordering of bonds, angles and dihedrals deterministic.
+* Fix the ARMC input validation with schema >= 0.7.5.
+* Fix ``filter_atoms`` on NumPy >= 1.24 and for identical-atom pairs.
+* Fix ``init_armc --restart False`` restarting anyway.
+* Do not let a broken CAT install break ``import FOX``.
+* Test using CP2K 2026.2.
+
+
 1.0.0
 *****
 * Bump the minimum nano-utils version
