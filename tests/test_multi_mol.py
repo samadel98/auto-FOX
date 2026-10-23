@@ -536,6 +536,39 @@ class TestAtoms:
                 mol.atoms_alias = dct
 
 
+@pytest.mark.skipif(ASE_EX is not None, reason="Requires ASE")
+@pytest.mark.parametrize("mol,format,filename", [
+    (MOL[::10], None, "mol.xyz"),
+    (MOL[::10], "extxyz", "mol.extxyz"),
+    (MOL_LATTICE_3D, "extxyz", "mol.extxyz"),
+    (MOL[::10], "proteindatabank", "mol.pdb"),
+], ids=["xyz", "extxyz", "extxyz_lattice", "pdb"])
+def test_from_file(mol: MultiMolecule, format: None | str, filename: str, tmp_path: Path) -> None:
+    """Test :meth:`MultiMolecule.from_file`."""
+    from ase.io import write
+
+    path = tmp_path / filename
+    write(path, mol.as_ase(), format=format)
+
+    mol_new = MultiMolecule.from_file(path, format=format)
+    np.testing.assert_allclose(mol_new, mol, atol=1e-3)
+    atoms_ref = {k: list(v) for k, v in mol.atoms.items()}
+    assertion.eq({k: list(v) for k, v in mol_new.atoms.items()}, atoms_ref)
+    assertion.eq(mol_new.properties.filename, path)
+    if mol.lattice is None:
+        assertion.is_(mol_new.lattice, None)
+    else:
+        np.testing.assert_allclose(mol_new.lattice, mol.lattice, atol=1e-3)
+
+    # Read a single frame or a subset of the frames
+    mol_last = MultiMolecule.from_file(path, format=format, index=-1)
+    np.testing.assert_allclose(mol_last, mol[-1:], atol=1e-3)
+    mol_sub = MultiMolecule.from_file(path, format=format, index="::2")
+    np.testing.assert_allclose(mol_sub, mol[::2], atol=1e-3)
+    if mol.lattice is not None:
+        np.testing.assert_allclose(mol_sub.lattice, mol.lattice[::2], atol=1e-3)
+
+
 @pytest.mark.parametrize(
     "mol,kwargs",
     [
