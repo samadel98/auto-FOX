@@ -25,14 +25,15 @@ from typing import (
     Union, Iterable, Tuple, Optional, Mapping, Any, MutableMapping, Iterator,
     Dict, TYPE_CHECKING, Generator, List, Collection, TypeVar, overload, cast,
     Sequence,
+    Literal, TypedDict,
 )
 
 import numpy as np
 import pandas as pd
 
 from scm.plams import Molecule
-from nanoutils import Literal, TypedDict, split_dict
 
+from .._nanoutils import split_dict
 from .guess import guess_param
 from .mc_post_process import AtomsFromPSF
 from .schemas import (

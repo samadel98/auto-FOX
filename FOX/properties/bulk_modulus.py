@@ -8,8 +8,8 @@ import numpy as np
 from scm.plams import Units
 from qmflows.packages import CP2K_Result
 from qmflows.warnings_qmflows import QMFlows_Warning
-from nanoutils import warning_filter
 
+from .._nanoutils import warning_filter
 from . import FromResult
 
 if TYPE_CHECKING:

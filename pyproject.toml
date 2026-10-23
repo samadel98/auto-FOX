@@ -48,14 +48,12 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "Nano-Utils>=2.3.2",
     "pyyaml>=6.0",
     "numpy>=1.21.2",
     "numpy>=2.1; python_version>='3.13'",  # NumPy 1.x has no wheels for Python >= 3.13
     "scipy>=1.7.2",
     "pandas>=1.4.0",
     "schema>=0.7.1,!=0.7.5",
-    "AssertionLib>=2.3",
     "noodles>=0.3.3",
     "h5py>=3.6.0",
     "qmflows>=0.12.0",

@@ -26,8 +26,8 @@ from typing import Optional
 import h5py
 import yaml
 import pandas as pd
-from nanoutils import UniqueLoader
 
+from ._nanoutils import UniqueLoader
 from .armc import dict_to_armc, run_armc
 
 

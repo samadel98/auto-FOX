@@ -42,9 +42,9 @@ import h5py
 import numpy as np
 import pandas as pd
 from scm.plams import Settings
-from nanoutils import PathType, group_by_values, recursive_keys
 from packaging.version import Version
 
+from .._nanoutils import PathType, group_by_values, recursive_keys
 from .. import __file__ as _fox_file
 from .._version import __version__
 from .._compat import COPY_IF_NEEDED

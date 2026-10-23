@@ -22,7 +22,7 @@ import inspect
 from os import PathLike
 from typing import (Dict, Optional, Any, Set, Iterator, Iterable, TypeVar, Tuple, cast,
                     List, Mapping, Union, Collection, Generic, IO, Callable, overload,
-                    TYPE_CHECKING)
+                    TYPE_CHECKING, TypedDict, Literal)
 from itertools import chain
 from collections import defaultdict
 from types import MappingProxyType
@@ -31,12 +31,9 @@ import numpy as np
 import pandas as pd
 
 from scm.plams import Molecule, Atom, Bond, MoleculeError
-from assertionlib.dataclass import AbstractDataClass
-from nanoutils import (
-    group_by_values, raise_if, AbstractFileContainer, set_docstring,
-    TypedDict, Literal,
-)
 
+from .._dataclass import AbstractDataClass
+from .._nanoutils import group_by_values, raise_if, AbstractFileContainer, set_docstring
 from ..utils import read_str_file, read_rtf_file
 from .._compat import COPY_IF_NEEDED
 from ..functions.molecule_utils import get_bonds, get_angles, get_dihedrals, get_impropers

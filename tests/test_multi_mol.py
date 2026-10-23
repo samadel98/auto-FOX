@@ -8,14 +8,14 @@ import weakref
 from os.path import join
 from pathlib import Path
 from itertools import chain, combinations, permutations
-from typing import Mapping, Any, Type, Set, Sequence, Callable
+from typing import Mapping, Any, Type, Set, Sequence, Callable, Literal
 
 import pytest
 import numpy as np
 
 from assertionlib import assertion
-from nanoutils import delete_finally, Literal
 
+from FOX._nanoutils import delete_finally
 from FOX import MultiMolecule, example_xyz
 from FOX.io import lattice_from_cell
 from FOX.classes.multi_mol import ASE_EX

@@ -1,2 +1,4 @@
 This product includes Automated Forcfield Optimization Extension, software developed by Bas van Beek
 .
+This product includes code from Nano-Utils and AssertionLib, software developed by B. F. van Beek
+(Apache License 2.0, see LICENSE-Apache-2.0.txt).

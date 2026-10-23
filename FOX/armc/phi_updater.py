@@ -17,15 +17,17 @@ API
 """
 
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Optional, Union, Iterable, cast, Sized, Tuple, List, Dict
+from typing import (
+    Callable, Any, Optional, Union, Iterable, cast, Sized, Tuple, List, Dict, SupportsIndex,
+    TypedDict,
+)
 from logging import Logger
 from functools import partial, wraps
 
 import numpy as np
 
-from assertionlib.dataclass import AbstractDataClass
-from nanoutils import set_docstring, SupportsIndex, as_nd_array, TypedDict
-
+from .._dataclass import AbstractDataClass
+from .._nanoutils import set_docstring, as_nd_array
 from .._compat import COPY_IF_NEEDED
 from ..type_hints import ArrayLike, ArrayLikeOrScalar, Scalar, DTypeLike
 

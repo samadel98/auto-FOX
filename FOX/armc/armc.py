@@ -21,12 +21,12 @@ from pathlib import Path
 from itertools import repeat
 from typing import (
     Tuple, TYPE_CHECKING, Any, Optional, Iterable, Mapping, Callable,
-    overload, Dict, List, ClassVar, Collection
+    overload, Dict, List, ClassVar, Collection,
+    Literal,
 )
 
 import h5py
 import numpy as np
-from nanoutils import Literal
 
 from .monte_carlo import MonteCarloABC
 from ..classes.multi_mol import MultiMolecule

@@ -15,12 +15,12 @@ API
 
 from typing import (
     Tuple, Dict, Mapping, Iterable, List, Sequence, overload, Any, TYPE_CHECKING, Callable,
-    ClassVar, Optional
+    ClassVar, Optional,
+    Literal,
 )
 
 import numpy as np
 
-from nanoutils import Literal
 from .armc import ARMC
 from ..type_hints import ArrayOrScalar
 from ..io.hdf5_utils import create_xyz_hdf5

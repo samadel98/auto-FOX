@@ -40,8 +40,8 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 
 from scm.plams import Settings
-from nanoutils import AbstractFileContainer, set_docstring
 
+from .._nanoutils import AbstractFileContainer, set_docstring
 from .cp2k_to_prm import CP2K_TO_PRM as _CP2K_TO_PRM, PRMMapping, PostProcess
 from ..functions.cp2k_utils import parse_cp2k_value
 

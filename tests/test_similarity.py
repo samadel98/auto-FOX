@@ -11,7 +11,6 @@ import numpy as np
 import h5py
 import pytest
 from scipy.spatial.distance import cdist
-from nanoutils import SetAttr
 
 import FOX
 from FOX import MultiMolecule, example_xyz
@@ -124,7 +123,8 @@ class TestCompareTrajectories:
         with pytest.raises(ValueError):
             fps_reduce(value)
 
-    def test_fps_no_cat(self) -> None:
+    def test_fps_no_cat(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Tests for :func:`~FOX.recipes.fps_reduce` calls without :mod:`CAT`."""
-        with SetAttr(FOX.recipes.similarity, "CAT_EX", ImportError()), pytest.raises(ImportError):
+        monkeypatch.setattr(FOX.recipes.similarity, "CAT_EX", ImportError())
+        with pytest.raises(ImportError):
             fps_reduce(DIST)

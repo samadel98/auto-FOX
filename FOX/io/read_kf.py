@@ -19,7 +19,8 @@ from typing import Tuple, Dict, List, Union
 import numpy as np
 
 from scm.plams import KFReader
-from nanoutils import group_by_values
+
+from .._nanoutils import group_by_values
 
 __all__ = ['read_kf']
 

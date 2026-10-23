@@ -21,6 +21,7 @@ from typing import (
     Any, SupportsInt, Type, Mapping, Collection, Sequence, SupportsFloat, Generator,
     Callable, Union, Optional, Tuple, FrozenSet, Iterable, Dict, TypeVar, List,
     cast, TYPE_CHECKING,
+    TypedDict, Literal,
 )
 
 import numpy as np
@@ -28,11 +29,11 @@ from schema import And, Or, Schema, Use, Optional as Optional_
 
 from qmflows import cp2k_mm, Settings as QmSettings
 from qmflows.packages import Package
-from nanoutils import (
-    Default, Formatter, supports_int, supports_float, isinstance_factory,
-    issubclass_factory, import_factory, as_nd_array, TypedDict, Literal,
-)
 
+from .._nanoutils import (
+    Default, Formatter, supports_int, supports_float, isinstance_factory, issubclass_factory,
+    import_factory, as_nd_array,
+)
 from .armc import ARMC
 from .monte_carlo import MonteCarloABC, MAX_SEED
 from .package_manager import PackageManager, PackageManagerABC

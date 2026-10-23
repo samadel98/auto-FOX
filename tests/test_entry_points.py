@@ -13,10 +13,10 @@ import yaml
 import numpy as np
 import pandas as pd
 from assertionlib import assertion
-from nanoutils import UniqueLoader
 from FOXdata import ARMC_DIR as ARMC_REF, ARMCPT_DIR as ARMCPT_REF
 
 import FOX.entry_points
+from FOX._nanoutils import UniqueLoader
 from FOX.armc import dict_to_armc
 from FOX.recipes import get_best
 from FOX.recipes.param import PLT_ERROR

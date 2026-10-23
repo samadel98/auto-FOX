@@ -52,7 +52,8 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from nanoutils import PathType
+
+from ._nanoutils import PathType
 
 if TYPE_CHECKING:
     import numpy.typing as npt

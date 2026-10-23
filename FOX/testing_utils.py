@@ -25,18 +25,18 @@ from pathlib import Path
 from collections import abc
 from typing import (
     Mapping, Optional, TypeVar, Type, Dict, Callable, Any, Union, Tuple, List,
-    overload, TYPE_CHECKING, Container
+    overload, TYPE_CHECKING, Container,
+    Literal,
 )
 
 import h5py
 import numpy as np
 
-from assertionlib import assertion
 from scm.plams import Molecule
 from qmflows import Settings as QmSettings
 from qmflows.packages import CP2KMM_Result
-from nanoutils import Literal, PathType, recursive_keys
 
+from ._nanoutils import PathType, recursive_keys
 from .functions.cp2k_utils import get_xyz_path
 
 if TYPE_CHECKING:
@@ -59,9 +59,24 @@ class _Key:
     pass
 
 
+def _assert_isinstance(obj: object, cls: Union[type, Tuple[type, ...]]) -> None:
+    """Raise an :exc:`AssertionError` if **obj** is not an instance of **cls**."""
+    __tracebackhide__ = True
+    if not isinstance(obj, cls):
+        raise AssertionError(f"expected an instance of {cls!r}; "
+                             f"observed type: {obj.__class__.__name__!r}")
+
+
+def _assert_is(obj: object, value: object) -> None:
+    """Raise an :exc:`AssertionError` if **obj** is not **value**."""
+    __tracebackhide__ = True
+    if obj is not value:
+        raise AssertionError(f"expected {value!r}; observed value: {obj!r}")
+
+
 def _val_class(mapping: Mapping) -> None:
     """Validate the :class:`type` of **mapping**."""
-    assertion.isinstance(mapping, abc.Mapping)
+    _assert_isinstance(mapping, abc.Mapping)
 
 
 def _val_items(mapping: Mapping[KT, VT],
@@ -69,55 +84,55 @@ def _val_items(mapping: Mapping[KT, VT],
                v_type: Union[Type[VT], Tuple[Type[VT], ...]]) -> None:
     """Validate the :meth:`~collections.abc.Mapping.items` method of **mapping**."""
     items = mapping.items()
-    assertion.isinstance(items, abc.ItemsView)
+    _assert_isinstance(items, abc.ItemsView)
     for k, v in mapping.items():
-        assertion.isinstance(k, k_type)
-        assertion.isinstance(v, v_type)
+        _assert_isinstance(k, k_type)
+        _assert_isinstance(v, v_type)
 
 
 def _val_keys(mapping: Mapping[KT, Any], k_type: Union[Type[KT], Tuple[Type[KT], ...]]) -> None:
     """Validate the :meth:`~collections.abc.Mapping.keys` method of **mapping**."""
     keys = mapping.keys()
-    assertion.isinstance(keys, abc.KeysView)
+    _assert_isinstance(keys, abc.KeysView)
     for k in keys:
-        assertion.isinstance(k, k_type)
+        _assert_isinstance(k, k_type)
 
 
 def _val_values(mapping: Mapping[Any, VT], v_type: Union[Type[VT], Tuple[Type[VT], ...]]) -> None:
     """Validate the :meth:`~collections.abc.Mapping.values` method of **mapping**."""
     values = mapping.values()
-    assertion.isinstance(values, abc.ValuesView)
+    _assert_isinstance(values, abc.ValuesView)
     for v in values:
-        assertion.isinstance(v, v_type)
+        _assert_isinstance(v, v_type)
 
 
 def _val_iter(mapping: Mapping[KT, Any], k_type: Union[Type[KT], Tuple[Type[KT], ...]]) -> None:
     """Validate the :meth:`~collections.abc.Mapping.__iter__` method of **mapping**."""
     iterator = iter(mapping)
-    assertion.isinstance(iterator, abc.Iterator)
+    _assert_isinstance(iterator, abc.Iterator)
     for k in iterator:
-        assertion.isinstance(k, k_type)
+        _assert_isinstance(k, k_type)
 
 
 def _val_len(mapping: Mapping) -> None:
     """Validate the :meth:`~collections.abc.Mapping.__len__` method of **mapping**."""
     length = len(mapping)
-    assertion.isinstance(length, int)
+    _assert_isinstance(length, int)
 
 
 def _val_contains(mapping: Mapping[KT, Any], key: KT) -> None:
     """Validate the :meth:`~collections.abc.Mapping.__contains__` method of **mapping**."""
     contains_true = key in mapping
     contains_false = _Key in mapping
-    assertion.is_(contains_true, True)
-    assertion.is_(contains_false, False)
+    _assert_is(contains_true, True)
+    _assert_is(contains_false, False)
 
 
 def _val_getitem(mapping: Mapping[KT, VT], key: KT,
                  v_type: Union[Type[VT], Tuple[Type[VT], ...]]) -> None:
     """Validate the :meth:`~collections.abc.Mapping.__getitem__` method of **mapping**."""
     v = mapping[key]
-    assertion.isinstance(v, v_type)
+    _assert_isinstance(v, v_type)
 
 
 def _val_get(mapping: Mapping[KT, VT], key: KT,
@@ -125,8 +140,8 @@ def _val_get(mapping: Mapping[KT, VT], key: KT,
     """Validate the :meth:`~collections.abc.Mapping.get` method of **mapping**."""
     v = mapping.get(key, default=True)  # type: ignore
     _v = mapping.get(_Key, default=True)  # type: ignore
-    assertion.isinstance(v, v_type)
-    assertion.is_(_v, True)
+    _assert_isinstance(v, v_type)
+    _assert_is(_v, True)
 
 
 Name = Literal['__class__', 'items', 'keys', 'values', '__iter__',
@@ -305,8 +320,10 @@ def compare_hdf5(f1: h5py.Group, f2: h5py.Group, skip: Container[str] = frozense
 
     """
     __tracebackhide__ = True
-    assertion.eq(list(recursive_keys(f1)), list(recursive_keys(f2)),
-                 message=f'group {f1.name!r} and {f2.name!r} keys')
+    keys1, keys2 = list(recursive_keys(f1)), list(recursive_keys(f2))
+    if keys1 != keys2:
+        raise AssertionError(f"group {f1.name!r} and {f2.name!r} keys differ:\n"
+                             f"{keys1!r}\n{keys2!r}")
 
     iterator1 = ((k, f1[k], f2[k]) for k in recursive_keys(f2) if k not in skip)
     for k1, dset1, dset2 in iterator1:
@@ -314,7 +331,9 @@ def compare_hdf5(f1: h5py.Group, f2: h5py.Group, skip: Container[str] = frozense
         _compare_arrays(ar1, ar2, err_msg=f'dataset {k1!r}\n')
 
         # Compare attributes
-        assertion.eq(dset1.attrs.keys(), dset2.attrs.keys(), message=f'dataset {k1!r} attributes')
+        if not dset1.attrs.keys() == dset2.attrs.keys():
+            raise AssertionError(f"dataset {k1!r} attributes differ:\n"
+                                 f"{list(dset1.attrs.keys())!r}\n{list(dset2.attrs.keys())!r}")
         iterator2 = ((k2, dset1.attrs[k2], dset1.attrs[k2]) for k2 in dset1.attrs.keys())
         for k2, attr1, attr2 in iterator2:
             _compare_arrays(attr1, attr2, err_msg=f'dataset {k1!r}; attribute {k2!r}')

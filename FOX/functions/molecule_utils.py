@@ -20,12 +20,11 @@ API
 
 """
 
-from typing import List, overload, Callable, Tuple
+from typing import List, overload, Callable, Tuple, Literal
 
 import numpy as np
 
 from scm.plams import Molecule, Atom, MoleculeError
-from nanoutils import Literal
 
 __all__ = ['get_bonds', 'get_angles', 'get_dihedrals', 'get_impropers', 'residue_argsort']
 

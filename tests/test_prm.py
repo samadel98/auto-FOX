@@ -9,7 +9,7 @@ from itertools import zip_longest
 import pandas as pd
 
 from assertionlib import assertion
-from nanoutils import delete_finally
+from FOX._nanoutils import delete_finally
 from FOX import PRMContainer
 
 PATH = Path('tests') / 'test_files'
