@@ -227,6 +227,18 @@ def test_armc(name: str) -> None:
         assertion.le(np.count_nonzero(grad, axis=-1), 2, post_process=np.all)
 
 
+class _Interrupt(Exception):
+    """Raised to stop an ARMC run halfway."""
+
+
+def _interrupt_after(iterable: Any, n: int) -> Generator[Any, None, None]:
+    """Yield the first **n** items of **iterable**, then raise :exc:`_Interrupt`."""
+    for i, item in enumerate(iterable):
+        if i == n:
+            raise _Interrupt
+        yield item
+
+
 def _get_seeded_armc(name: str, path: Path, folder: str, seed: Any, n: int) -> Tuple[Any, Any]:
     """Construct a short ARMC run from **name** with the given seed and results hook."""
     with open(PATH / name, 'r') as f:
@@ -261,6 +273,32 @@ def test_armc_seed(name: str, n: int, tmp_path: Path) -> None:
         np.testing.assert_array_equal(f1['aux_error_mod'][:], f2['aux_error_mod'][:])
         np.testing.assert_array_equal(f1['phi'][:], f2['phi'][:])
         assertion.assert_(np.array_equal, f1['param'][:], f3['param'][:], invert=True)
+
+
+@pytest.mark.parametrize('n_results', [8, 13, 19])
+def test_armc_restart_seed(n_results: int, tmp_path: Path) -> None:
+    """Test that an interrupted and restarted ARMC run makes the same moves as one without."""
+    armc1, job_kwargs1 = _get_seeded_armc('armc_ref.yaml', tmp_path, 'ref', 1, n=1)
+    run_armc(armc1, restart=False, **job_kwargs1)
+
+    # Stop the second run halfway, then restart it with a different seed:
+    # the restart must continue from the generator state stored in the .hdf5 file
+    armc2, job_kwargs2 = _get_seeded_armc('armc_ref.yaml', tmp_path, 'restart', 1, n=1)
+    armc2.package_manager.hook = _interrupt_after(armc2.package_manager.hook, n_results)
+    with pytest.raises(_Interrupt):
+        run_armc(armc2, restart=False, **job_kwargs2)
+
+    armc3, job_kwargs3 = _get_seeded_armc('armc_ref.yaml', tmp_path, 'restart', 2, n=1)
+    armc3.package_manager.hook = iter(load_results(ARMC_REF, n=1)[n_results:21])
+    run_armc(armc3, restart=True, **job_kwargs3)
+    assertion.assert_(next, armc3.package_manager.hook, exception=StopIteration)
+
+    with h5py.File(tmp_path / 'ref' / 'armc.hdf5', 'r') as f1, \
+            h5py.File(tmp_path / 'restart' / 'armc.hdf5', 'r') as f2:
+        assertion.eq(f2.attrs['seed'], 1)
+        np.testing.assert_array_equal(f1['param'][:], f2['param'][:])
+        np.testing.assert_array_equal(f1['acceptance'][:], f2['acceptance'][:])
+        np.testing.assert_array_equal(f1['phi'][:], f2['phi'][:])
 
 
 @pytest.mark.parametrize('seed,exc', [

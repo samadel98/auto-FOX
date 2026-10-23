@@ -166,9 +166,13 @@ class ARMCPT(ARMC):
 
             for omega in range(self.sub_iter_len):
                 key_new = self.do_inner(kappa, omega, acceptance, key_new)
-            self.phi.update(acceptance)
-            idx_iter = self.swap_phi(acceptance, self)
-            self._swap_phi(idx_iter)
+            self._end_super_iter(acceptance)
+
+    def _end_super_iter(self, acceptance: np.ndarray) -> None:
+        r"""Update :math:`\phi` and swap parameter sets at the end of a super-iteration."""
+        self.phi.update(acceptance)
+        idx_iter = self.swap_phi(acceptance, self)
+        self._swap_phi(idx_iter)
 
     def do_inner(self, kappa: int, omega: int, acceptance: np.ndarray,
                  key_old: Sequence[Key]) -> List[Key]:
