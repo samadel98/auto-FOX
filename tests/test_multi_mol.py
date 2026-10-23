@@ -214,7 +214,7 @@ class TestRDF:
     @pytest.mark.parametrize("mol", [MOL_LATTICE_3D, MOL_LATTICE_2D])
     @pytest.mark.parametrize(
         "periodic",
-        chain([None], combinations("xyz", 1), combinations("xyz", 2), combinations("xyz", 3)),
+        [None, *combinations("xyz", 1), *combinations("xyz", 2), *combinations("xyz", 3)],
     )
     def test_lattice(
         self, mol: MultiMolecule, periodic: None | Sequence[Literal["x", "y", "z"]]
@@ -258,12 +258,7 @@ class TestDebye:
     @pytest.mark.parametrize("mol", [MOL_LATTICE_3D, MOL_LATTICE_2D])
     @pytest.mark.parametrize(
         "periodic",
-        chain(
-            [None],
-            combinations("xyz", 1),
-            combinations("xyz", 2),
-            combinations("xyz", 3),
-        ),
+        [None, *combinations("xyz", 1), *combinations("xyz", 2), *combinations("xyz", 3)],
     )
     def test_lattice(
         self, mol: MultiMolecule, periodic: None | Sequence[Literal["x", "y", "z"]]
