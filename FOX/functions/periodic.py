@@ -21,11 +21,7 @@ from itertools import chain
 import numpy as np
 
 if TYPE_CHECKING:
-    import sys
-    if sys.version_info >= (3, 8):
-        from typing import Literal, TypedDict
-    else:
-        from typing_extensions import Literal, TypedDict
+    from typing import Literal, TypedDict
 
     SCT = TypeVar("SCT", bound=np.generic)
     NDArray = np.ndarray[Any, np.dtype[SCT]]

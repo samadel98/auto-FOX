@@ -2,14 +2,8 @@
 
 from __future__ import annotations
 
-import sys
-from collections.abc import Iterable, Callable
+from collections.abc import Iterable, Callable, Iterator
 from typing import TYPE_CHECKING
-
-if sys.version_info >= (3, 9):
-    from collections.abc import Iterator
-else:
-    from typing import Iterator
 
 if TYPE_CHECKING:
     from typing_extensions import Self

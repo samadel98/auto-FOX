@@ -16,7 +16,6 @@ API
 
 from __future__ import annotations
 
-import sys
 from typing import (
     Sequence,
     Hashable,
@@ -35,10 +34,7 @@ from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist
 
 if TYPE_CHECKING:
-    if sys.version_info >= (3, 8):
-        from typing import Literal
-    else:
-        from typing_extensions import Literal
+    from typing import Literal
     from numpy import float64 as f8, int64 as i8
 
     _T = TypeVar("_T")

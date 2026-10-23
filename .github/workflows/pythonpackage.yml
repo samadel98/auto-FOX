@@ -33,28 +33,16 @@ jobs:
             fail-fast: false
             matrix:
                 os: [ubuntu-latest, macos-latest, windows-latest]
-                version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+                version: ['3.10', '3.11', '3.12', '3.13', '3.14']
                 special: ['']
-                exclude:
-                    # setup-python has no Python 3.8 or 3.9 builds for Ubuntu 26.04 (ubuntu-latest)
-                    -   os: ubuntu-latest
-                        version: '3.8'
-                    -   os: ubuntu-latest
-                        version: '3.9'
                 include:
-                    -   os: ubuntu-24.04
-                        special: ''
-                        version: '3.8'
-                    -   os: ubuntu-24.04
-                        special: ''
-                        version: '3.9'
                     # QMFlows master still pins numpy<2, which has no Python 3.13 wheels
                     -   os: ubuntu-latest
                         special: '; pre-release'
                         version: '3.12'
-                    -   os: ubuntu-24.04
+                    -   os: ubuntu-latest
                         special: '; minimum version'
-                        version: '3.8'
+                        version: '3.10'
         env:
             CP2K_DATA_DIR: /usr/share/cp2k/data
 
