@@ -37,7 +37,9 @@ _S = TypeVar('_S', bound=spmatrix)
 def degree_of_separation(
     mol: Molecule,
     limit: float = np.inf,
-    bond_mat: None | np.ndarray = None,
+    bond_mat: (
+        None | npt.ArrayLike | tuple[npt.ArrayLike, tuple[npt.ArrayLike, npt.ArrayLike]]
+    ) = None,
 ) -> npt.NDArray[np.float64]:
     r"""Construct a matrix with the degree of separation of all atom-pairs in **mol**.
 

@@ -45,7 +45,7 @@ class AliasTuple(NamedTuple):
 if TYPE_CHECKING:
     import numpy.typing as npt
 
-    _ArLikeInt = Union[int, Sequence[int], npt._SupportsArray[np.dtype[np.integer[Any]]]]
+    _ArLikeInt = Union[int, Sequence[int], npt.NDArray[np.integer[Any]]]
     IdxDict = MappingProxyType[str, np.ndarray[Any, np.dtype[np.intp]]]
     IdxMapping = Union[
         Mapping[str, _ArLikeInt],
@@ -167,7 +167,7 @@ class _MolLoc(Generic[MT]):
     def __getitem__(self, key: Union[str, Tuple[str, ...]]) -> MT:
         """Get items from :attr:`_MolLoc.mol`."""
         idx = self._parse_key(key)
-        return self.mol[..., idx, :]
+        return cast(MT, self.mol[..., idx, :])
 
     def __setitem__(self, key: Union[str, Tuple[str, ...]], value: ArrayLike) -> None:
         """Set items in :attr:`_MolLoc.mol`."""
@@ -231,6 +231,11 @@ class _MultiMolecule(np.ndarray):
 
     """
 
+    if TYPE_CHECKING:
+        # Indexing returns a `MultiMolecule` (or a scalar), not the plain `np.ndarray`
+        # that the NumPy stubs promise
+        def __getitem__(self, key: Any, /) -> Any: ...
+
     def __new__(
         cls: Type[MT],
         coords: npt.ArrayLike,
@@ -251,7 +256,7 @@ class _MultiMolecule(np.ndarray):
         obj.lattice = cast("Optional[np.ndarray[Any, np.dtype[np.float64]]]", lattice)
         return obj
 
-    def __array_finalize__(self, obj: _MultiMolecule) -> None:
+    def __array_finalize__(self, obj: None | np.ndarray) -> None:
         """Finalize the array creation."""
         if obj is None:
             return
@@ -391,7 +396,7 @@ class _MultiMolecule(np.ndarray):
     @property
     def x(self: MT) -> MT:
         """Get or set the x coordinates for all atoms in instance as 2D array."""
-        return self[:, :, 0]
+        return cast(MT, self[:, :, 0])
 
     @x.setter
     def x(self, value: npt.NDArray[np.floating[Any] | np.integer[Any]]) -> None:
@@ -400,7 +405,7 @@ class _MultiMolecule(np.ndarray):
     @property
     def y(self: MT) -> MT:
         """Get or set the y coordinates for all atoms in this instance as 2D array."""
-        return self[:, :, 1]
+        return cast(MT, self[:, :, 1])
 
     @y.setter
     def y(self, value: npt.NDArray[np.floating[Any] | np.integer[Any]]) -> None:
@@ -409,7 +414,7 @@ class _MultiMolecule(np.ndarray):
     @property
     def z(self: MT) -> MT:
         """Get or set the z coordinates for all atoms in this instance as 2D array."""
-        return self[:, :, 2]
+        return cast(MT, self[:, :, 2])
 
     @z.setter
     def z(self, value: npt.NDArray[np.floating[Any] | np.integer[Any]]) -> None:
@@ -486,7 +491,9 @@ class _MultiMolecule(np.ndarray):
             k, slc = self.atoms_alias[key]
             return self.atoms[k][slc]
 
-    def copy(self: MT, order: str = 'C', *, deep: bool = True) -> MT:
+    def copy(  # type: ignore[override]
+        self: MT, order: Literal['K', 'A', 'C', 'F'] = 'C', *, deep: bool = True,
+    ) -> MT:
         """Create a copy of this instance.
 
         Parameters
@@ -532,7 +539,7 @@ class _MultiMolecule(np.ndarray):
         """Return the canonical string representation of this instance."""
         return f'{self.__class__.__name__}(..., shape={self.shape}, dtype={repr(self.dtype.name)})'
 
-    def __reduce__(self: MT) -> Tuple[MT, Tuple[Any, Any, Any, Any, Any, Any]]:
+    def __reduce__(self: MT) -> Tuple[type[MT], Tuple[Any, Any, Any, Any, Any, Any]]:
         """Helper function for :mod:`pickle`."""
         cls = type(self)
         args = (

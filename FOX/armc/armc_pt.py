@@ -97,7 +97,7 @@ def swap_random(acceptance: np.ndarray, armcpt: "ARMCPT",
 
     if idx1 != idx2:
         self.logger.info(f"Swapping parameter sets {idx1} and {idx2}")
-        return [(idx1, idx2)]
+        return [(int(idx1), int(idx2))]
     else:
         self.logger.info("Preserving all parameter sets")
         return []
@@ -106,7 +106,7 @@ def swap_random(acceptance: np.ndarray, armcpt: "ARMCPT",
 class ARMCPT(ARMC):
     """An :class:`ARMC` subclass implementing a parallel tempering procedure."""
 
-    HAS_LOOP: ClassVar[Literal[True]] = True
+    HAS_LOOP: ClassVar[Literal[True]] = True  # type: ignore[assignment]
 
     def __init__(self, swapper: SwapFunc = swap_random, **kwargs: Any) -> None:
         r"""Initialize an :class:`ARMCPT` instance.
@@ -135,7 +135,8 @@ class ARMCPT(ARMC):
         shape = (self.sub_iter_len, len(self.phi.phi))
         return np.zeros(shape, dtype=bool)
 
-    @overload
+    # ARMCPT works on a list of keys (one per parameter set), where ARMC works on a single key
+    @overload  # type: ignore[override]
     def _parse_call(self, start: None = ..., key_new: None = ...) -> List[Key]: ...
     @overload
     def _parse_call(self, start: int, key_new: Iterable[Key]) -> List[Key]: ...
@@ -149,7 +150,7 @@ class ARMCPT(ARMC):
         else:
             return list(ret)
 
-    @overload
+    @overload  # type: ignore[override]
     def __call__(self, start: None = ..., key_new: None = ...) -> None: ...
     @overload
     def __call__(self, start: int, key_new: Key) -> None: ...
@@ -174,8 +175,9 @@ class ARMCPT(ARMC):
         idx_iter = self.swap_phi(acceptance, self)
         self._swap_phi(idx_iter)
 
-    def do_inner(self, kappa: int, omega: int, acceptance: np.ndarray,
-                 key_old: Sequence[Key]) -> List[Key]:
+    def do_inner(  # type: ignore[override]
+        self, kappa: int, omega: int, acceptance: np.ndarray, key_old: Sequence[Key],
+    ) -> List[Key]:
         r"""Run the inner loop of the :meth:`ARMC.__call__` method.
 
         Parameters
@@ -215,8 +217,9 @@ class ARMCPT(ARMC):
                         pes_new, pes_validation, kappa, omega)
         return key_new
 
-    def _do_inner3(self, pes_new: PesMapping, pes_validation: PesMapping,
-                   key_old: Iterable[Key]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _do_inner3(  # type: ignore[override]
+        self, pes_new: PesMapping, pes_validation: PesMapping, key_old: Iterable[Key],
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Evaluate the auxiliary error; accept if the new parameter set lowers the error."""
         aux_new = self.get_aux_error(pes_new)
         aux_validation = self.get_aux_error(pes_validation, validation=True)
@@ -224,10 +227,12 @@ class ARMCPT(ARMC):
         error_change = (aux_new - aux_old).sum(axis=-1)
         return error_change, aux_new, aux_validation
 
-    def _do_inner4(self, accept: Iterable[bool], error_change: Iterable[bool],
-                   aux_new: Iterable[np.ndarray],
-                   key_new: Iterable[Key], key_old: Iterable[Key],
-                   kappa: int, omega: int) -> List[Key]:
+    def _do_inner4(  # type: ignore[override]
+        self, accept: Iterable[bool], error_change: Iterable[float],
+        aux_new: Iterable[np.ndarray],
+        key_new: Iterable[Key], key_old: Iterable[Key],
+        kappa: int, omega: int,
+    ) -> List[Key]:
         """Update the auxiliary error history, apply phi & update job settings."""
         ret = []
         enumerator = enumerate(zip(key_new, key_old, accept, error_change, aux_new))

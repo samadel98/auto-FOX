@@ -288,7 +288,7 @@ def rdf(series: pd.Series, mol_list: Iterable[MultiMolecule]) -> None:
     """Guess parameters in **df** using the Boltzmann-inverted radial distribution function."""
     is_null = series.isnull()
     nonzero = series[~is_null].index
-    atom_subset = set(chain.from_iterable(series[is_null].index))
+    atom_subset = sorted(set(chain.from_iterable(series[is_null].index)))
 
     # Construct the RDF and guess the parameters
     rdf_gen = (mol.init_rdf(atom_subset=atom_subset) for mol in mol_list)

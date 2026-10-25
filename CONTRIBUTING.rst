@@ -49,7 +49,8 @@ You want to make some kind of change to the code base
    ``pytest -m "not slow"`` skips the slowest tests, which CI runs on one job only.
    The ARMC tests also need the test data package (``pip install https://github.com/nlesc-nano/auto-FOX-data/releases/download/1.2.0/Auto_FOX_Data-1.2.0-py3-none-any.whl``),
    and ``tests/test_armc.py::test_with_cp2k`` only runs when ``cp2k.ssmp`` is on your ``PATH``.
-   Check the code style with ``pip install -e .[lint]``, ``flake8 FOX tests`` and ``pydocstyle FOX``.
+   Check the code style with ``pip install -e .[lint]``, ``flake8 FOX tests`` and ``pydocstyle FOX``,
+   and the type hints with ``pip install mypy types-PyYAML`` and ``mypy FOX``.
 
 5. Add your own tests (if necessary).
 

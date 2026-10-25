@@ -80,7 +80,8 @@ _T = TypeVar("_T")
 
 MolSubset = Union[None, slice, int]
 AtomSubset = Union[
-    None, slice, range, int, str, Sequence[int], Sequence[str], Sequence[Sequence[int]]
+    None, slice, range, int, str, Sequence[int], Sequence[str], Sequence[Sequence[int]],
+    "np.ndarray[Any, Any]",
 ]
 
 
@@ -160,7 +161,7 @@ class MultiMolecule(_MultiMolecule):
 
     """  # noqa: E501
 
-    @overload
+    @overload  # type: ignore[override]
     def round(self: MT, decimals: int = ..., *, inplace: Literal[False] = ...) -> MT: ...  # type: ignore[misc] # noqa: E501
     @overload
     def round(self, decimals: int = ..., *, inplace: Literal[True] = ...) -> None: ...
@@ -264,15 +265,17 @@ class MultiMolecule(_MultiMolecule):
         mult = np.array(
             [(i, j, k) for i in range(ar[0]) for j in range(ar[1]) for k in range(ar[2])]
         )
-        lat = self.lattice if self.lattice.ndim == 2 else self.lattice[None, ...]
-        lat_trans = (lat[:, None, ...] * mult[None, ..., None]).sum(axis=-1)
+        # The lattice vectors are stored as rows: translate each cell by `mult @ lattice`
+        lat = self.lattice if self.lattice.ndim == 3 else self.lattice[None, ...]
+        lat_trans = mult @ lat  # shape: (n_lattice, n_cells, 3)
 
-        mol_trans = lat_trans[..., None, :] + self[:, None, ...]
+        mol_trans = lat_trans[:, :, None, :] + self[:, None, ...]
         if mol_trans.shape[1] == 1:
-            return mol_trans[..., 0]
+            return mol_trans[:, 0].copy()
         else:
-            mol, other = mol_trans[..., 0], mol_trans[..., 1:]
-            return mol.concatenate(other[..., 1:], lattice=lat * ar)
+            mol = mol_trans[:, 0]
+            other = [mol_trans[:, i] for i in range(1, mol_trans.shape[1])]
+            return mol.concatenate(other, lattice=self.lattice * ar[:, None])
 
     def concatenate(
         self: MT,
@@ -307,14 +310,12 @@ class MultiMolecule(_MultiMolecule):
         elif len({m.shape[0] for m in mol_list}) != 1:
             raise ValueError("All `MultiMolecule` instances must be of the same length")
 
-        # Construct the new atoms
-        proto_atoms = defaultdict(list)
-        offset = 0
-        for i, m in enumerate(mol_list):
-            if i:
-                offset += m.shape[1]
+        # Construct the new atoms, offsetting the indices by the number of preceding atoms
+        offsets = np.cumsum([0] + [m.shape[1] for m in mol_list[:-1]])
+        proto_atoms: defaultdict[str, list[np.ndarray]] = defaultdict(list)
+        for offset, m in zip(offsets, mol_list):
             for k, v in m.atoms.items():
-                proto_atoms[k](v + offset)
+                proto_atoms[k].append(v + offset)
         atoms = {k: np.fromiter(chain.from_iterable(v), np.int64) for k, v in proto_atoms.items()}
 
         # Construct the new coordinates
@@ -330,9 +331,10 @@ class MultiMolecule(_MultiMolecule):
         bonds_shape = (sum(m.bonds.shape[0] for m in mol_list), 3)
         bonds = np.empty(bonds_shape, dtype=np.int64)
         i, j = 0, 0
-        for m in mol_list:
+        for offset, m in zip(offsets, mol_list):
             j += m.bonds.shape[0]
             bonds[i:j] = m.bonds
+            bonds[i:j, :2] += offset
             i += m.bonds.shape[0]
 
         cls = type(self)
@@ -542,7 +544,7 @@ class MultiMolecule(_MultiMolecule):
         else:
             return coords @ rotmat
 
-    @overload
+    @overload  # type: ignore[override]
     def sort(self, sort_by: Union[str, Sequence[int]] = ..., reverse: bool = ..., inplace: Literal[True] = ...) -> None: ...  # type: ignore[misc] # noqa: E501
     @overload
     def sort(self: MT, sort_by: Union[str, Sequence[int]] = ..., reverse: bool = ..., inplace: Literal[False] = ...) -> MT: ...  # noqa: E501
@@ -731,6 +733,7 @@ class MultiMolecule(_MultiMolecule):
         loop, at_subset = self._get_loop(atom_subset)
 
         # Get the time-averaged property
+        data: Any
         if loop:
             data = [method(atom_subset=at, **kwargs) for at in at_subset]
         else:
@@ -1103,6 +1106,9 @@ class MultiMolecule(_MultiMolecule):
     def _get_rmsd_columns(
         loop: Literal[True], atom_subset: Union[slice, Sequence[int]]
     ) -> Sequence[Hashable]: ...
+    @overload  # noqa: E301
+    @staticmethod
+    def _get_rmsd_columns(loop: bool, atom_subset: AtomSubset = ...) -> Sequence[Hashable]: ...
     @staticmethod  # noqa: E301
     def _get_rmsd_columns(loop, atom_subset=None):
         """Return the columns for the RMSD dataframe.
@@ -1151,6 +1157,14 @@ class MultiMolecule(_MultiMolecule):
         index: Union[pd.Index, pd.Series, np.ndarray],
         loop: Literal[False],
         atom_subset: Union[Sequence[str], Sequence[Sequence[int]]],
+    ) -> Tuple[Sequence[Hashable], np.ndarray]: ...
+    @overload  # noqa: E301
+    def _get_rmsf_columns(
+        self,
+        rmsf: Any,
+        index: Union[pd.Index, pd.Series, np.ndarray],
+        loop: bool,
+        atom_subset: Any = ...,
     ) -> Tuple[Sequence[Hashable], np.ndarray]: ...
     def _get_rmsf_columns(self, rmsf, index, loop, atom_subset=None):  # noqa: E301
         """Return the columns and data for the RMSF dataframe.
@@ -1212,6 +1226,8 @@ class MultiMolecule(_MultiMolecule):
     def _get_loop(
         self, atom_subset: Union[Sequence[str], Sequence[Sequence[int]]]
     ) -> Tuple[Literal[True], Sequence[Sequence[int]]]: ...
+    @overload  # noqa: E301
+    def _get_loop(self, atom_subset: AtomSubset) -> Tuple[bool, Any]: ...
     def _get_loop(self, atom_subset):  # noqa: E301
         """Figure out if the supplied subset warrants a for loop or not.
 
@@ -1328,12 +1344,13 @@ class MultiMolecule(_MultiMolecule):
             Radii are used as index.
 
         """
+        pair_dict: Mapping[str, Sequence[np.ndarray]]
         if atom_subset is not None and atom_pairs is not None:
             raise TypeError("`atom_subset` and `atom_pairs` are mutually exclusive")
         elif atom_pairs is not None:
             pair_dict = _parse_atom_pairs(self, atom_pairs)
         elif atom_subset is not None:
-            pair_dict = self.get_pair_dict(atom_subset, r=2)
+            pair_dict = self.get_pair_dict(atom_subset, r=2)  # type: ignore[arg-type]
         else:
             # If **atom_subset** is None: extract atomic symbols from they keys of **self.atoms**
             pair_dict = self.get_pair_dict(sorted(self.atoms, key=str), r=2)
@@ -1346,6 +1363,7 @@ class MultiMolecule(_MultiMolecule):
         m_self = self[m_subset]
 
         # Parse the lattice and periodicty settings
+        lattice_ar: np.ndarray | _GetNone
         if periodic is not None:
             periodic_ar = parse_periodic(periodic)
             if self.lattice is None:
@@ -1416,12 +1434,13 @@ class MultiMolecule(_MultiMolecule):
             Keys are of the form: at_symbol1 + ' ' + at_symbol2 (*e.g.* ``"Cd Cd"``).
 
         """
+        pair_dict: Mapping[str, Sequence[np.ndarray]]
         if atom_subset is not None and atom_pairs is not None:
             raise TypeError("`atom_subset` and `atom_pairs` are mutually exclusive")
         elif atom_pairs is not None:
             pair_dict = _parse_atom_pairs(self, atom_pairs)
         elif atom_subset is not None:
-            pair_dict = self.get_pair_dict(atom_subset, r=2)
+            pair_dict = self.get_pair_dict(atom_subset, r=2)  # type: ignore[arg-type]
         else:
             # If **atom_subset** is None: extract atomic symbols from they keys of **self.atoms**
             pair_dict = self.get_pair_dict(sorted(self.atoms, key=str), r=2)
@@ -1440,6 +1459,7 @@ class MultiMolecule(_MultiMolecule):
         m_self = self[m_subset] * Units.conversion_ratio("angstrom", "au")
 
         # Parse the lattice and periodicty settings
+        lattice_ar: np.ndarray | _GetNone
         if periodic is not None:
             periodic_ar = parse_periodic(periodic)
             if self.lattice is None:
@@ -1472,7 +1492,7 @@ class MultiMolecule(_MultiMolecule):
         mol_subset: MolSubset = None,
         atom_subset: Tuple[AtomSubset, AtomSubset] = (None, None),
         lattice: None | np.ndarray[Any, np.dtype[np.float64]] = None,
-        periodicity: Iterable[Literal[0, 1, 2]] = range(3),
+        periodicity: Iterable[Literal[0, 1, 2]] = (0, 1, 2),
     ) -> np.ndarray[Any, np.dtype[np.float64]]:
         """Create and return a distance matrix for all molecules and atoms in this instance.
 
@@ -1536,7 +1556,7 @@ class MultiMolecule(_MultiMolecule):
         return np.linalg.norm(ret, axis=-1)
 
     def get_pair_dict(self, atom_subset: Union[Sequence[AtomSubset],
-                                               Mapping[Hashable, Sequence[AtomSubset]]],
+                                               Mapping[Hashable, AtomSubset]],
                       r: int = 2) -> Dict[str, Tuple[np.ndarray, ...]]:
         """Take a subset of atoms and return a dictionary.
 
@@ -1550,12 +1570,13 @@ class MultiMolecule(_MultiMolecule):
             The length of the to-be returned subsets.
 
         """
+        key_iter: Iterator[Hashable]
         if isinstance(atom_subset, abc.Mapping):
             key_iter = (str(i) for i in atom_subset.keys())
-            value_iter = (self._get_atom_subset(i) for i in atom_subset.values())
+            value_iter = (self._get_atom_subset(i, as_array=True) for i in atom_subset.values())
         else:
             key_iter = ((j if isinstance(j, abc.Hashable) else i) for i, j in enumerate(atom_subset))  # noqa
-            value_iter = (self._get_atom_subset(i) for i in atom_subset)
+            value_iter = (self._get_atom_subset(i, as_array=True) for i in atom_subset)
 
         key_gen = combinations_with_replacement(key_iter, r)
         value_gen = combinations_with_replacement(value_iter, r)
@@ -1736,7 +1757,7 @@ class MultiMolecule(_MultiMolecule):
         elif isinstance(atom_subset[0], (int, np.integer)):
             return enumerate(atom_subset)
         elif isinstance(atom_subset[0], str):
-            return [(at, self.atoms[at]) for at in atom_subset]
+            return [(at, self.atoms[at]) for at in cast("Sequence[str]", atom_subset)]
         elif isinstance(atom_subset[0][0], (int, np.integer)):
             return enumerate(atom_subset)
 
@@ -1829,6 +1850,7 @@ class MultiMolecule(_MultiMolecule):
         del_atom[at_subset] = False
         mol = self.delete_atoms(del_atom)[m_subset]
 
+        at_pairs: Dict[str, Any]
         if atom_pairs is not None:
             at_pairs = _parse_atom_pairs(self, atom_pairs)
         elif atom_subset is not None:
@@ -1855,41 +1877,45 @@ class MultiMolecule(_MultiMolecule):
             if lattice is None:
                 raise TypeError("cannot perform periodic calculations if the "
                                 "molecules `lattice` is None")
-            else:
-                lattice = cast("np.ndarray[Any, np.dtype[np.float64]]", lattice[m_subset])
+            elif lattice.ndim == 3:
+                lattice = lattice[m_subset]
+            # Copy, as the absent axes are set to `inf` below
+            lattice = lattice.astype(np.float64, copy=True)
 
             # Set the vector-length of all absent axes to `inf`
             slc = [i for i in range(3) if i not in periodic_ar]
             lattice[..., slc, :] = np.inf
 
-            lattice_iter = repeat(lattice) if lattice.ndim == 2 else iter(lattice)
-            periodic_iter = repeat(periodic_ar)
+            lattice_iter: Iterator[Any] = repeat(lattice) if lattice.ndim == 2 else iter(lattice)
+            periodic_iter: Iterator[Any] = repeat(periodic_ar)
         else:
             lattice_iter = repeat(None)
             periodic_iter = repeat(range(3))
+
+        idx_list: List[Any] = list(at_pairs.values())
 
         # Construct the angular distribution function
         # Perform the task in parallel (with dask) if possible
         if DASK_EX is None and r_max_:
             func = dask.delayed(_adf_inner_cdktree)
-            jobs = [func(m, n, r_max_, at_pairs.values(), l, p, weight) for m, l, p in
+            jobs = [func(m, n, r_max_, idx_list, l, p, weight) for m, l, p in
                     zip(mol, lattice_iter, periodic_iter)]
             results = dask.compute(*jobs)
         elif DASK_EX is None and not r_max_:
             func = dask.delayed(_adf_inner)
-            jobs = [func(m, at_pairs.values(), l, p, weight) for m, l, p in
+            jobs = [func(m, idx_list, l, p, weight) for m, l, p in
                     zip(mol, lattice_iter, periodic_iter)]
             results = dask.compute(*jobs)
         elif DASK_EX is not None and r_max_:
             func = _adf_inner_cdktree
-            results = [func(m, n, r_max_, at_pairs.values(), l, p, weight) for m, l, p in
+            results = [func(m, n, r_max_, idx_list, l, p, weight) for m, l, p in
                        zip(mol, lattice_iter, periodic_iter)]
         elif DASK_EX is not None and not r_max_:
             func = _adf_inner
-            results = [func(m, at_pairs.values(), l, p, weight) for m, l, p in
+            results = [func(m, idx_list, l, p, weight) for m, l, p in
                        zip(mol, lattice_iter, periodic_iter)]
 
-        df = get_adf_df(at_pairs)
+        df = get_adf_df(list(at_pairs))
         df.loc[:, :] = np.array(results).mean(axis=0).T
         return df
 
@@ -1969,7 +1995,7 @@ class MultiMolecule(_MultiMolecule):
         elif isinstance(j, np.integer):
             return ret2.astype(np.intp, copy=False)
         elif isinstance(j, np.bool_):
-            return ret2 if not as_array else np.arange(len(ret2), dtype=np.intp)[ret]
+            return ret2 if not as_array else np.arange(len(ret2), dtype=np.intp)[ret2]
 
         raise TypeError(f"'atom_subset' is of invalid type: '{atom_subset.__class__.__name__}'")
 
@@ -2137,14 +2163,16 @@ class MultiMolecule(_MultiMolecule):
         m_subset = self[self._get_mol_subset(mol_subset)].astype(str)
         at = self.symbol[:, None]
         header = '{:d}\n'.format(len(at))
-        kwargs = {
+        kwargs: Dict[str, Any] = {
             'fmt': ['%-10.10s', '%-15s', '%-15s', '%-15s'], 'delimiter': 5 * ' ', 'comments': ''
         }
 
         # Alter variables depending on the presence or absence of self.properties.comments
         if 'comments' in self.properties and isinstance(self.properties.comments, abc.Iterable):
             header += '{}'
-            iterator = islice(zip_longest(self.properties.comments, m_subset), len(m_subset))
+            iterator: Iterable[tuple[Any, Any]] = islice(
+                zip_longest(self.properties.comments, m_subset), len(m_subset)
+            )
         else:
             header += 'Frame {:d}'
             iterator = enumerate(m_subset, 1)
@@ -2303,9 +2331,9 @@ class MultiMolecule(_MultiMolecule):
 
         # Fill the template molecule with bonds
         if self.bonds.any():
-            bond_idx = np.ones(self.shape[-2], dtype=int)
-            bond_idx[at_subset] += np.arange(len(at_subset))
-            bond_idx = bond_idx.tolist()
+            bond_idx_ar = np.ones(self.shape[-2], dtype=int)
+            bond_idx_ar[at_subset] += np.arange(len(at_subset))
+            bond_idx = bond_idx_ar.tolist()
 
             add_bond = mol_template.add_bond
             for i, j, order in self.bonds:
@@ -2314,6 +2342,7 @@ class MultiMolecule(_MultiMolecule):
                     at2 = mol_template[bond_idx[j]]
                     add_bond(Bond(atom1=at1, atom2=at2, order=order/10.0))
 
+        lattice_iter: Iterator[list[Any]]
         if self.lattice is None:
             lattice_iter = ([] for _ in self[m_subset])
         elif self.lattice.ndim == 2:
@@ -2367,8 +2396,7 @@ class MultiMolecule(_MultiMolecule):
         n_mol = len(mol_list)
         n_atom = len(plams_mol)
         iterator = chain.from_iterable(at.coords for mol in mol_list for at in mol)
-        coords = np.fromiter(iterator, dtype=float, count=n_mol*n_atom*3)
-        coords = coords.reshape(n_mol, n_atom, 3)
+        coords = np.fromiter(iterator, dtype=float, count=n_mol*n_atom*3).reshape(n_mol, n_atom, 3)
 
         kwargs: dict = {}
 
@@ -2427,6 +2455,7 @@ class MultiMolecule(_MultiMolecule):
         symbols = self.symbol[j]
         positions_iter = self[i, j]
 
+        lattice_iter: Iterator[Any]
         if "cell" in kwargs:
             lattice_iter = repeat(kwargs.pop("cell"))
         else:
@@ -2470,9 +2499,7 @@ class MultiMolecule(_MultiMolecule):
         atoms = {PeriodicTable.get_symbol(k): v for k, v in _atoms.items()}
 
         lattice = np.array([m.cell for m in mol_list], dtype=np.float64)
-        if not lattice.any():
-            lattice = None
-        return cls(coords, atoms=atoms, lattice=lattice)
+        return cls(coords, atoms=atoms, lattice=lattice if lattice.any() else None)
 
     @classmethod
     def from_xyz(cls: Type[MT], filename: Union[str, bytes, PathLike],

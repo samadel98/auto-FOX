@@ -353,8 +353,8 @@ def get_V_impropers(
     iterator = df.iloc[:, 0:2].iterrows()
     for i, item in iterator:
         j = np.zeros(len(improp_idx), dtype=bool)
-        for k in permutations([1, 2, 3], r=3):
-            k = (0,) + k
+        for k_ in permutations([1, 2, 3], r=3):
+            k = (0,) + k_
             j |= np.all(symbol[improp_idx[:, k]] == i, axis=1)  # Consider all valid permutations
         ret[i] = get_V_harmonic(improper[:, j], *item).sum(axis=1)
     return ret

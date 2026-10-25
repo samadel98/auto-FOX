@@ -74,7 +74,7 @@ def wrap_plams_logger(logfile: Union[None, str, os.PathLike] = None,
 
 
 def get_logger(name: str,
-               handlers: Union[Handler, Iterable[Handler]] = FileHandler,
+               handlers: Union[None, Handler, Iterable[Handler]] = None,
                level: int = DEBUG,
                style: Literal['%', '{', '$'] = '{',
                fmt: Optional[str] = '[{asctime}] {levelname}: {message}',
@@ -92,7 +92,8 @@ def get_logger(name: str,
         >>> name = 'my_logger'
         >>> filename = 'path/to/my/logger.log'
 
-        >>> logger: logging.Logger = get_logger(name=name, filename=filename)
+        >>> handler = logging.FileHandler(filename)
+        >>> logger: logging.Logger = get_logger(name, handlers=handler)  # doctest: +SKIP
 
 
     Parameters
@@ -100,8 +101,9 @@ def get_logger(name: str,
     name : :class:`str`
         The name of the to-be returned logger.
 
-    handlers : :class:`~collections.abc.Iterable` [:class:`logging.Handler`]
-        An iterable with one or more logging Handler.
+    handlers : :class:`~logging.Handler` or :class:`Iterable[Handler] <typing.Iterable>`, optional
+        One or more logging handlers.
+        Defaults to a single :class:`logging.StreamHandler`.
 
     level : :class:`int`
         The level of logging.
@@ -126,6 +128,8 @@ def get_logger(name: str,
     logger = getLogger(name=name)
     logger.setLevel(level)
 
+    if handlers is None:
+        handlers = StreamHandler()
     handler_list = [handlers] if isinstance(handlers, Handler) else handlers
     for handler in handler_list:
         handler.setLevel(level)

@@ -105,7 +105,7 @@ def dict_to_armc(input_dict: MainMapping) -> Tuple[MonteCarloABC, RunDict]:
     run_kwargs['psf'] = psf_list
     _parse_ligand_alias(psf_list, prm=param)
     if psf_list is not None:
-        mc.pes_post_process = [AtomsFromPSF.from_psf(*psf_list)]  # type: ignore[assignment]
+        mc.pes_post_process = [AtomsFromPSF.from_psf(*psf_list)]  # type: ignore[list-item]
         workdir = Path(run_kwargs['path']) / run_kwargs['folder']
         _update_psf_settings(package.values(), phi.phi, workdir)  # type: ignore[arg-type]
         _update_psf_charge(param, psf_list)
@@ -289,8 +289,8 @@ def get_package(dct: JobMapping, phi: Iterable) -> Tuple[PackageManager, Tuple[M
         A PackageManager and a tuple of MultiMolecules.
 
     """
-    _sub_pkg_dict: Dict[str, SubJobMapping] = split_dict(  # type: ignore[call-overload]
-        dct, preserve_order=True, keep_keys={'type', 'molecule', 'lattice'}
+    _sub_pkg_dict: Dict[str, SubJobMapping] = split_dict(
+        cast(Dict[str, Any], dct), preserve_order=True, keep_keys={'type', 'molecule', 'lattice'}
     )
 
     job_dict = validate_job(dct)
@@ -319,8 +319,8 @@ def get_package(dct: JobMapping, phi: Iterable) -> Tuple[PackageManager, Tuple[M
 
                 pkg_name = kwargs2['type'].pkg_name
                 kwargs2['settings'] = s_list[i]
-                kwargs2['settings'].specific[pkg_name].soft_update(kwargs2.pop('template'))  # type: ignore[misc] # noqa: E501
-                data[k].append(kwargs2)  # type: ignore[attr-defined]
+                kwargs2['settings'].specific[pkg_name].soft_update(kwargs2.pop('template'))  # type: ignore[attr-defined,misc] # noqa: E501
+                data[k].append(kwargs2)  # type: ignore[arg-type]
 
     pkg_type = job_dict['type']
     return pkg_type(data), job_dict['molecule']  # type: ignore[return-value]
@@ -337,8 +337,8 @@ def get_param(dct: ParamMapping_) -> Tuple[ParamMapping, dict, dict, ValidationD
 
     """
     _prm_dict = dct
-    _sub_prm_dict = split_dict(  # type: ignore[call-overload]
-        _prm_dict, preserve_order=True,
+    _sub_prm_dict: Dict[str, Any] = split_dict(
+        cast(Dict[str, Any], _prm_dict), preserve_order=True,
         keep_keys={'type', 'move_range', 'func', 'kwargs', 'validation'}
     )
     _sub_prm_dict_frozen = _get_prm_frozen(_sub_prm_dict)
@@ -379,7 +379,7 @@ def get_pes(dct: Mapping[str, PESMapping], mol_len: int) -> Dict[str, PESDict]:
         weight = mol_len * (1.0,) if v['weight'] is None else tuple(v['weight'])
         assert mol_len == len(weight)
         if len(weight) == 1:
-            v['weight'] = weight[0]
+            v['weight'] = weight[0]  # type: ignore[typeddict-item]
         else:
             v['weight'] = weight
 
@@ -513,7 +513,7 @@ def _update_psf_charge(param: ParamMapping, psf_list: Iterable[PSFContainer]) ->
     for i, psf in enumerate(psf_list):
         # Map atom types to atom charges and
         # validate that each atom type only has a single unique charge
-        charge_dict = {}
+        charge_dict: Dict[Tuple[str, str, str], float] = {}
         for _k, v in zip(psf.atom_type, psf.charge):
             k = ("charge", "charge", _k)
             if not math.isclose(charge_dict.get(k, v), v):
@@ -522,7 +522,7 @@ def _update_psf_charge(param: ParamMapping, psf_list: Iterable[PSFContainer]) ->
             charge_dict[k] = v
 
         # Update the charges in `param`
-        for k, v in charge_dict.items():  # type: Tuple[str, str, str], float
+        for k, v in charge_dict.items():
             if k not in param.param.index:
                 param.add_param(k, v, **metadata)
 

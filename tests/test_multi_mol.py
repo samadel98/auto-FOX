@@ -639,3 +639,72 @@ def test_copy(func: Callable[[MultiMolecule], MultiMolecule], mol: MultiMolecule
             np.testing.assert_array_equal(v3, v4, err_msg=k)
         else:
             assertion.eq(v3, v4, message=k)
+
+
+def test_concatenate() -> None:
+    """Test :meth:`MultiMolecule.concatenate`."""
+    mol1 = MOL[:2]
+    mol2 = mol1.delete_atoms("Cd")
+    n = mol1.shape[1]
+
+    ret = mol1.concatenate([mol2])
+    assert ret.shape == (2, n + mol2.shape[1], 3)
+    np.testing.assert_array_equal(ret[:, :n], mol1)
+    np.testing.assert_array_equal(ret[:, n:], mol2)
+    for k, idx in ret.atoms.items():
+        ref = np.concatenate([mol1.atoms[k], mol2.atoms.get(k, np.empty(0, np.intp)) + n])
+        np.testing.assert_array_equal(idx, ref)
+
+    bonds_ref = mol2.bonds.copy()
+    bonds_ref[:, :2] += n
+    np.testing.assert_array_equal(ret.bonds, np.concatenate([mol1.bonds, bonds_ref]))
+
+    with pytest.raises(ValueError):
+        MOL_LATTICE_2D.concatenate([MOL_LATTICE_2D])
+
+
+@pytest.mark.parametrize("mol", [MOL_LATTICE_2D, MOL_LATTICE_3D], ids=["2d", "3d"])
+def test_get_supercell(mol: MultiMolecule) -> None:
+    """Test :meth:`MultiMolecule.get_supercell`."""
+    n = mol.shape[1]
+    lattice = mol.lattice if mol.lattice.ndim == 3 else mol.lattice[None]
+
+    ret = mol.get_supercell((1, 2, 1))
+    assert ret.shape == (len(mol), 2 * n, 3)
+    np.testing.assert_allclose(ret[:, :n], mol)
+    np.testing.assert_allclose(ret[:, n:], mol + lattice[:, None, 1])
+    np.testing.assert_allclose(ret.lattice, mol.lattice * [[1], [2], [1]])
+    atom_count = {k: 2 * len(v) for k, v in mol.atoms.items()}
+    assert {k: len(v) for k, v in ret.atoms.items()} == atom_count
+
+    np.testing.assert_allclose(mol.get_supercell((1, 1, 1)), mol)
+    assert mol.get_supercell((2, 2, 2)).shape == (len(mol), 8 * n, 3)
+
+    with pytest.raises(ValueError):
+        MOL.get_supercell((2, 1, 1))
+    with pytest.raises(ValueError):
+        mol.get_supercell((0, 1, 1))
+
+
+def test_get_atom_subset_iterator() -> None:
+    """Test :meth:`MultiMolecule._get_atom_subset` with an iterator of boolean arrays."""
+    bool_ar = np.zeros(MOL.shape[1], dtype=np.bool_)
+    bool_ar[:3] = True
+    np.testing.assert_array_equal(MOL._get_atom_subset(iter([bool_ar]), as_array=True), [0, 1, 2])
+
+
+@pytest.mark.parametrize("mol", [MOL_LATTICE_2D, MOL_LATTICE_3D], ids=["2d", "3d"])
+def test_adf_periodic_lattice(mol: MultiMolecule) -> None:
+    """Test that periodic :meth:`MultiMolecule.init_adf` calculations leave the lattice as is."""
+    mol = mol.copy()
+    lattice = mol.lattice.copy()
+    mol.init_adf(mol_subset=np.s_[1:3], atom_subset=["Pb"], periodic="xy", r_max=4)
+    np.testing.assert_array_equal(mol.lattice, lattice)
+
+
+def test_rdf_range_subset() -> None:
+    """Test :meth:`MultiMolecule.init_rdf` with a :class:`range`-based atom subset."""
+    rdf = MOL.init_rdf(mol_subset=np.s_[:2], atom_subset=[range(10), "Cd"])
+    ref = MOL.init_rdf(mol_subset=np.s_[:2], atom_subset=[MOL.atoms["Cd"][:10], "Cd"])
+    np.testing.assert_allclose(rdf.values, ref.values)
+    assert rdf.columns.tolist() == ["range(0, 10) range(0, 10)", "range(0, 10) Cd", "Cd Cd"]

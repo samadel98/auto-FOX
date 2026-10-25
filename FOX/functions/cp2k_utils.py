@@ -99,14 +99,16 @@ def parse_cp2k_value(param: Union[str, T], unit: str, default_unit: Optional[str
     default_unit = unit if default_unit is None else default_unit
 
     # Identify the unit and the quantity of interest
+    value: T | float
     if not isinstance(param, str):
         value_unit = None
+        value = param
     else:
         value_unit, _param = param.split()
-        param = float(_param)
+        value = float(_param)
 
     if not value_unit:
-        return param * Units.conversion_ratio(default_unit, unit)
+        return value * Units.conversion_ratio(default_unit, unit)  # type: ignore[return-value]
 
     # Correct the units
     value_unit_lower = value_unit.lower().strip('[').rstrip(']')
@@ -115,7 +117,7 @@ def parse_cp2k_value(param: Union[str, T], unit: str, default_unit: Optional[str
     except KeyError as ex:
         raise ValueError(f"Invalid unit {value_unit_lower!r};\naccepted units: "
                          f"{tuple(UNIT_MAP.keys())!r}") from ex
-    return param * Units.conversion_ratio(value_unit_parsed, unit)
+    return value * Units.conversion_ratio(value_unit_parsed, unit)  # type: ignore[return-value]
 
 
 def get_xyz_path(path: Union[str, os.PathLike]) -> str:

@@ -170,7 +170,7 @@ class PackageManagerABC(ABC, Mapping[str, Value]):
                 if None in (job1, job2):
                     return False
                 for k, v1 in job1.items():
-                    v2 = job2[k]
+                    v2 = cast(Mapping[str, Any], job2)[k]
                     if isinstance(v1, Molecule):
                         ret &= (np.asarray(v1) == np.asarray(v2)).all()
         except KeyError:
@@ -304,7 +304,7 @@ class PackageManager(PackageManagerABC):
         for settings in job_iterator:  # Type: QmSettings
             prm_to_df(settings)
 
-    def __call__(
+    def __call__(  # type: ignore[override]
         self, logger: Optional[Logger] = None, n_processes: int = 1
     ) -> Union[Tuple[None, None], Tuple[List[MultiMolecule], List[Any]]]:
         r"""Run all jobs and return a sequence of list of MultiMolecules.
@@ -357,11 +357,11 @@ class PackageManager(PackageManagerABC):
         if old_results is None:
             mol = job['molecule']
         else:
-            mol = old_results.geometry
+            mol = old_results.geometry  # type: ignore[attr-defined]
 
         if isinstance(obj_type, CP2K) and isinstance(old_results, CP2K_Result):
             try:
-                lattice: np.ndarray[Any, np.dtype[np.float64]] = old_results.lattice
+                lattice: None | np.ndarray[Any, np.dtype[np.float64]] = old_results.lattice
                 assert lattice is not None
             except (AssertionError, FileNotFoundError):
                 pass
@@ -372,7 +372,7 @@ class PackageManager(PackageManagerABC):
         return obj_type(mol=mol, job_name=job_name, validate_output=False, settings=settings)
 
     @staticmethod
-    def clear_jobs() -> None:
+    def clear_jobs() -> None:  # type: ignore[override]
         """Delete all jobs."""
         job_manager: JobManager = config.default_jobmanager
         workdir: Union[str, os.PathLike] = job_manager.workdir
@@ -418,7 +418,7 @@ class PackageManager(PackageManagerABC):
                 return None, None
 
             try:
-                lattice: None | np.ndarray[Any, np.dtype[np.float64]] = result.lattice
+                lattice: None | np.ndarray[Any, np.dtype[np.float64]] = result.lattice  # type: ignore[attr-defined]  # noqa: E501
                 assert lattice is not None
             except (AssertionError, FileNotFoundError):
                 lattice = None

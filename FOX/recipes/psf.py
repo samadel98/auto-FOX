@@ -100,6 +100,7 @@ from types import MappingProxyType
 from typing import (Union, Iterable, Optional, Callable, Mapping, Type, Iterator, TypeVar,
                     Any, Tuple, List, cast, Sequence, Dict, TYPE_CHECKING)
 from itertools import chain
+from operator import itemgetter
 from collections import abc
 
 import numpy as np
@@ -123,14 +124,14 @@ else:
         mol = to_rdmol(from_smiles("C"))
         atom = mol.GetAtoms()[0]
 
-        ret: None | type[TypeError] = None
+        ret: None | type[Exception] = None
         try:
             # Trigger an ArgumentError by setting a non-integer charge
             atom.SetFormalCharge(0.5)
         except Exception as ex:
             ret = type(ex)
             if (ret.__qualname__ == "ArgumentError") and (ret.__module__ == "Boost.Python"):
-                return ret
+                return cast("type[TypeError]", ret)
         raise TypeError("Failed to extract Boost.Python.ArgumentError") from ret
 
     ArgumentError = _get_boost_exc()
@@ -215,9 +216,8 @@ def generate_psf(
                 bonds += ligand_len
 
         # Create a nested list with residue indices
-        res_ar = np.arange(ligand_start, len(qd))
-        res_ar = res_ar.reshape(-1, ligand_len)
-        res_list: List[Sequence[int]] = res_ar.tolist()
+        res_ar = np.arange(ligand_start, len(qd)).reshape(-1, ligand_len)
+        res_list: List[Sequence[int]] = cast(List[Sequence[int]], res_ar.tolist())
         res_list.insert(0, range(ligand_start))
     else:
         if rtf_file is not None:
@@ -504,7 +504,7 @@ def _overlay(
 
 def _items_sorted(dct: Mapping[KT, VT]) -> Iterator[Tuple[KT, VT]]:
     """Return a :meth:`dict.items()` iterator whose items are sorted by the dictionary values."""
-    return iter(sorted(dct.items(), key=lambda kv: kv[1], reverse=True))
+    return iter(sorted(dct.items(), key=itemgetter(1), reverse=True))
 
 
 @raise_if(RDKIT_EX)
@@ -525,8 +525,8 @@ def _get_rddict(ligands: Iterable[str | Molecule | Mol]) -> Dict[Mol, int]:
     tmp_dct = {(lig, MOL_MAPPING[type(lig)](lig)): 0 for lig in ligands}
     no_bonds = []
     for lig, rdmol in tmp_dct:
-        tmp_dct[lig, rdmol] = len(rdmol.GetAtoms())
-        if not len(rdmol.GetBonds()):
+        tmp_dct[lig, rdmol] = rdmol.GetNumAtoms()
+        if not rdmol.GetNumBonds():
             no_bonds.append(lig)
 
     if no_bonds:

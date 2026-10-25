@@ -58,7 +58,7 @@ def run_armc(armc: MonteCarloABC,
                               lambda n: 'Renaming' in n,
                               lambda n: 'Trying to obtain results of crashed or failed job' in n)
 
-        with redirect_stdout(writer):
+        with redirect_stdout(writer):  # type: ignore[type-var]
             stream_handler = armc.logger.handlers[0]
             warning_logger = logging.getLogger('py.warnings')
             try:

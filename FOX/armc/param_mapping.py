@@ -326,7 +326,10 @@ class ParamMappingABC(AbstractDataClass, ABC):
             return False
 
         names = ["param", "param_old", "metadata", "is_independent"]
-        return all(np.array_equal(getattr(self, n, None), getattr(value, n, None)) for n in names)
+        return all(
+            np.array_equal(cast(Any, getattr(self, n, None)), cast(Any, getattr(value, n, None)))
+            for n in names
+        )
 
     @AbstractDataClass.inherit_annotations()
     def _str_iterator(self):
@@ -372,7 +375,9 @@ class ParamMappingABC(AbstractDataClass, ABC):
         self.param_old.loc[idx] = value
 
         idx_range = self.metadata.columns.levels[0]
-        metadata = {(i, k): v for i in idx_range for k, v in self.FILL_VALUE.items()}
+        metadata: Dict[Tuple[Any, str], Any] = {
+            (i, k): v for i in idx_range for k, v in self.FILL_VALUE.items()
+        }
         metadata.update(((i, k), v) for i in idx_range for k, v in kwargs.items())
         self.metadata.loc[idx] = metadata
 
@@ -463,7 +468,7 @@ class ParamMappingABC(AbstractDataClass, ABC):
         """  # noqa
         return value
 
-    def apply_constraints(self, idx: Tup3, value: float, param: int) -> None | BaseException:
+    def apply_constraints(self, idx: Tup3, value: float, param: int) -> None | Exception:
         """An optional function for applying further constraints based on **idx** and **value**.
 
         Should perform an inplace update of this instance.
@@ -535,7 +540,7 @@ class ParamMappingABC(AbstractDataClass, ABC):
             }
         }
 
-        _template = {
+        _template: Dict[str, Any] = {
             'param': '',
             'constraints': [],
             'frozen': {},
@@ -587,7 +592,9 @@ class ParamMappingABC(AbstractDataClass, ABC):
                     unit = self.metadata.at[(k, param, atom), (i, "unit")] or None
                     visited.add(visited_key)
                     dct[k].loc[param, "param"] = param
-                    dct[k].loc[param, "unit"] = UNIT_MAP_REVERSED.get(unit, unit)
+                    dct[k].loc[param, "unit"] = (
+                        UNIT_MAP_REVERSED.get(unit, unit) if unit is not None else None
+                    )
                 dct[k].loc[param, atom] = v
             ret.append(dct)
         return ret
@@ -687,7 +694,7 @@ class ParamMapping(ParamMappingABC):
         param_backup = self.param.copy()
         exclude_old: set[str] = set()
         for i in iterator:
-            charge = self._net_charge[i] if is_charge_like else None
+            charge = cast(np.ndarray, self._net_charge)[i] if is_charge_like else None
 
             frozen = self.metadata.loc[key, (i, 'frozen')]
             count = self.metadata.loc[key, (i, 'count')]

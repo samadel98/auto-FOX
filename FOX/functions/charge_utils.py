@@ -83,7 +83,7 @@ class ChargeError(ValueError):
                             tol=self.tol, atoms=self.atoms)
         return cls, self.args, kwargs
 
-    def __setstate__(self, state: _StateDict) -> None:
+    def __setstate__(self, state: _StateDict) -> None:  # type: ignore[override]
         """Helper for :meth:`pickle`; handles the setting of keyword arguments."""
         for k, v in state.items():
             setattr(self, k, v)

@@ -39,6 +39,7 @@ from typing import Mapping, Tuple, Sequence, Optional, Iterable, Union, Generato
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 from scipy.spatial import cKDTree
 
 from scm.plams import Units, Settings
@@ -50,7 +51,8 @@ from ..io import PSFContainer, PRMContainer
 
 __all__ = ['get_non_bonded', 'get_V', 'MAX_ARRAY_SIZE']
 
-SliceMapping = Mapping[Tuple[str, str], Tuple[Sequence[int], Sequence[int]]]
+_IndexLike = Union[Sequence[int], np.ndarray]
+SliceMapping = Mapping[Tuple[str, str], Tuple[_IndexLike, _IndexLike]]
 PrmMapping = Mapping[Tuple[str, str], Tuple[float, float, float]]
 
 #: The maximum number of elements to-be simultaneously stored in a single ndarray
@@ -243,6 +245,8 @@ def get_V(mol: MultiMolecule, slice_mapping: SliceMapping,
     if np.isinf(distance_upper_bound):
         dist_func = _get_dist
         k = None
+    elif k is None:
+        raise TypeError("'k' must be an integer if 'distance_upper_bound' is finite")
     else:
         dist_func = functools.partial(_get_kd_dist, k=k, distance_upper_bound=distance_upper_bound)
 
@@ -276,7 +280,7 @@ def get_V(mol: MultiMolecule, slice_mapping: SliceMapping,
     return elstat_df, lj_df
 
 
-def _get_dist(mol: MultiMolecule, ij: np.ndarray, ligand_count: int,
+def _get_dist(mol: MultiMolecule, ij: Tuple[_IndexLike, _IndexLike], ligand_count: int,
               contains_core: bool, mol_subset: Optional[slice]) -> np.ndarray:
     """Construct an array of distance matrices for :func:`get_V`."""
     dist = mol.get_dist_mat(mol_subset=mol_subset, atom_subset=ij)
@@ -290,7 +294,7 @@ def _get_dist(mol: MultiMolecule, ij: np.ndarray, ligand_count: int,
     return dist
 
 
-def _get_kd_dist(mol: MultiMolecule, ij: np.ndarray, ligand_count: int,
+def _get_kd_dist(mol: MultiMolecule, ij: Tuple[_IndexLike, _IndexLike], ligand_count: int,
                  contains_core: bool, mol_subset: Optional[slice],
                  k: int = 20, distance_upper_bound: float = 10.0) -> np.ndarray:
     """Construct an array of truncated distance matrices for :func:`get_V`."""
@@ -299,7 +303,7 @@ def _get_kd_dist(mol: MultiMolecule, ij: np.ndarray, ligand_count: int,
     mol2 = mol[mol_subset, j_ar]
 
     # Fill the (truncated) distance tensor
-    dist = np.empty((len(mol1), len(i_ar), k), dtype=float)
+    dist = np.empty((len(mol1), len(i_ar), k), dtype=np.float64)
     idx = np.empty_like(dist, dtype=int)
     for n, (xyz1, xyz2) in enumerate(zip(mol1, mol2)):
         tree = cKDTree(xyz2)
@@ -337,7 +341,7 @@ def _get_slice_iterator(stop: int, dmat_size: int) -> Generator[slice, None, Non
         start += step
 
 
-def get_V_elstat(q: float, dist: np.ndarray,
+def get_V_elstat(q: float, dist: ArrayLike,
                  shift_cutoff: Optional[float] = None) -> np.ndarray:
     r"""Calculate and sum the electrostatic potential energy given a distance matrix **dist**..
 
@@ -377,7 +381,7 @@ def get_V_elstat(q: float, dist: np.ndarray,
     return np.nansum(ret, axis=axis)
 
 
-def get_V_lj(sigma: float, epsilon: float, dist: np.ndarray,
+def get_V_lj(sigma: float, epsilon: float, dist: ArrayLike,
              shift_cutoff: Optional[float] = None) -> np.ndarray:
     r"""Calculate and sum the Lennard-Jones potential given a distance matrix **dist**.
 

@@ -120,7 +120,6 @@ readme = { file = ["README.rst"], content-type = "text/x-rst" }
 write_to = "FOX/_version.py"
 
 [tool.mypy]
-plugins = "numpy.typing.mypy_plugin"
 show_error_codes = true
 
 [[tool.mypy.overrides]]
@@ -133,6 +132,8 @@ module = [
     "scipy.*",
     "schema.*",
     "h5py.*",
+    "dask.*",
+    "ase.*",
 ]
 ignore_missing_imports = true
 

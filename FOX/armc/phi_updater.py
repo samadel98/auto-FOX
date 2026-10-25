@@ -276,7 +276,7 @@ class PhiUpdater(PhiUpdaterABC):
             A logger for reporting the updated value.
 
         """
-        mean_acceptance: np.ndarray = np.mean(acceptance, axis=0)
+        mean_acceptance: np.ndarray = np.asarray(acceptance).mean(axis=0)
         sign = cast(np.ndarray, np.sign(self.a_target - mean_acceptance))
 
         phi = self.phi * self.gamma**sign
