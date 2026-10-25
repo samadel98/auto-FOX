@@ -32,6 +32,13 @@ Unreleased
 * Do not let a broken CAT install break ``import FOX``.
 * Drop the Nano-Utils and AssertionLib dependencies (AssertionLib is still used by the tests);
   the few helpers Auto-FOX used from them are now part of Auto-FOX.
+* Type-check the package with mypy in CI.
+* Fix ``MultiMolecule.concatenate`` and ``MultiMolecule.get_supercell``, which always raised an error.
+* Fix ``MultiMolecule.init_adf`` with ``periodic`` overwriting the lattice of the molecule.
+* Fix ``MultiMolecule.init_rdf``, ``init_debye`` and ``init_adf`` failing for ``range`` and
+  ``slice`` atom subsets.
+* Fix ``FOX.functions.randomize_param.randomize`` ignoring ``val_min`` and failing for ``val_max``.
+* Fix ``FOX.logger.get_logger`` failing without ``handlers``; it now defaults to a ``StreamHandler``.
 * Test using CP2K 2026.2.
 
 
