@@ -104,7 +104,8 @@ from collections import abc
 
 import numpy as np
 from scm.plams import Molecule, Atom, Bond, MoleculeError, PT
-from nanoutils import group_by_values, PathType, raise_if
+
+from .._nanoutils import group_by_values, PathType, raise_if
 
 from FOX import PSFContainer
 from FOX.io.read_psf import overlay_rtf_file, overlay_str_file

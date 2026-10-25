@@ -19,12 +19,13 @@ API
 """
 
 import reprlib
-from typing import Tuple, Dict, Iterable, List, Iterator, Generator, overload
+from typing import Tuple, Dict, Iterable, List, Iterator, Generator, overload, Literal
 from itertools import islice, chain
 
 import numpy as np
 from scm.plams import Units
-from nanoutils import Literal, PathType, group_by_values
+
+from .._nanoutils import PathType, group_by_values
 
 __all__ = ['read_multi_xyz']
 

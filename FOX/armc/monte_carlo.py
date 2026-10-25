@@ -31,11 +31,11 @@ from typing import (
 )
 
 import numpy as np
-from assertionlib.dataclass import AbstractDataClass
-from nanoutils import EMPTY_MAPPING
 from qmflows.packages import Result
 from qmflows.warnings_qmflows import QMFlows_Warning
 
+from .._dataclass import AbstractDataClass
+from .._nanoutils import EMPTY_MAPPING
 from ..logger import DEFAULT_LOGGER
 from ..type_hints import ArrayOrScalar
 

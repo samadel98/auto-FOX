@@ -16,12 +16,11 @@ from __future__ import annotations
 
 from itertools import chain
 from collections.abc import Hashable, Collection, Container
-from typing import SupportsFloat, TypeVar, Any
+from typing import SupportsFloat, TypeVar, Any, TypedDict
 
 import numpy as np
 import pandas as pd
 
-from nanoutils import TypedDict
 
 __all__ = ['update_charge']
 

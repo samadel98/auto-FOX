@@ -29,6 +29,7 @@ from typing import (
     Sequence, Optional, Union, List, Hashable, Callable, Iterable, Dict, Tuple, Any, Mapping,
     overload, TypeVar, Type, Container, cast, TYPE_CHECKING, Sized, Iterator, NoReturn,
     SupportsIndex,
+    Literal,
 )
 
 import numpy as np
@@ -38,8 +39,8 @@ from scipy.fftpack import fft
 from scipy.spatial.distance import cdist
 
 from scm.plams import Molecule, Atom, Bond, PeriodicTable, Units
-from nanoutils import group_by_values, Literal
 
+from .._nanoutils import group_by_values
 from .. import __version__
 from ..utils import slice_iter, lattice_to_volume
 from .._compat import COPY_IF_NEEDED

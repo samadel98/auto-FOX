@@ -18,9 +18,8 @@ API
 """  # noqa: E501
 
 from types import MappingProxyType
-from typing import Optional, Callable, Tuple, Mapping
+from typing import Optional, Callable, Tuple, Mapping, TypedDict
 
-from nanoutils import TypedDict
 
 __all__ = ['PRMMapping', 'CP2K_TO_PRM']
 

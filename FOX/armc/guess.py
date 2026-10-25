@@ -24,15 +24,16 @@ from typing import (
     Dict,
     Set,
     Container,
-    TYPE_CHECKING
+    TYPE_CHECKING,
+    Literal,
 )
 
 import numpy as np
 import pandas as pd
 
 from scm.plams import Units
-from nanoutils import Literal, PathType
 
+from .._nanoutils import PathType
 from ..io import PSFContainer, PRMContainer
 from ..utils import prepend_exception
 from ..ff import UFF_DF, SIGMA_DF, LJDataFrame, estimate_lj

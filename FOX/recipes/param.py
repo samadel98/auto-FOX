@@ -127,7 +127,8 @@ import h5py
 import numpy as np
 import pandas as pd
 from pandas.core.generic import NDFrame
-from nanoutils import raise_if
+
+from .._nanoutils import raise_if
 
 from FOX import from_hdf5
 from FOX.logger import DEFAULT_LOGGER as logger

@@ -27,7 +27,8 @@ from itertools import chain, zip_longest
 from collections import abc
 from typing import (
     Mapping, TypeVar, Hashable, Any, KeysView, ItemsView, ValuesView, Iterator, overload,
-    Union, Dict, List, Optional, Tuple, Iterable, Sequence, cast, TYPE_CHECKING
+    Union, Dict, List, Optional, Tuple, Iterable, Sequence, cast, TYPE_CHECKING,
+    TypedDict,
 )
 
 import numpy as np
@@ -37,8 +38,8 @@ from qmflows import Settings as QmSettings
 from qmflows.cp2k_utils import prm_to_df
 from qmflows.packages import CP2K, CP2K_Result
 from noodles import gather, schedule, has_scheduled_methods, run_parallel
-from nanoutils import set_docstring, TypedDict
 
+from .._nanoutils import set_docstring
 from ..classes import MultiMolecule
 from ..functions.cp2k_utils import get_xyz_path
 from ..logger import DummyLogger

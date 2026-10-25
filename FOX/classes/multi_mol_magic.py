@@ -23,14 +23,14 @@ import warnings
 from types import MappingProxyType
 from typing import (
     Dict, Optional, List, Any, Callable, Union, Mapping, Iterable, Tuple,
-    NoReturn, TypeVar, Type, Generic, cast, TYPE_CHECKING, Sequence, NamedTuple
+    NoReturn, TypeVar, Type, Generic, cast, TYPE_CHECKING, Sequence, NamedTuple,
+    Literal,
 )
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from scm.plams import PeriodicTable, PTError, Settings  # type: ignore
-from assertionlib.ndrepr import NDRepr
-from nanoutils import ArrayLike, Literal
 
 from .._compat import COPY_IF_NEEDED
 
@@ -249,7 +249,6 @@ class _MultiMolecule(np.ndarray):
         obj.properties = cast("Settings", properties)
         obj.atoms_alias = cast("AliasDict", atoms_alias)
         obj.lattice = cast("Optional[np.ndarray[Any, np.dtype[np.float64]]]", lattice)
-        obj._ndrepr = NDRepr()
         return obj
 
     def __array_finalize__(self, obj: _MultiMolecule) -> None:
@@ -262,7 +261,6 @@ class _MultiMolecule(np.ndarray):
         self.properties = getattr(obj, 'properties', None)
         self.atoms_alias = getattr(obj, 'atoms_alias', None)
         self.lattice = getattr(obj, 'lattice', None)
-        self._ndrepr = getattr(obj, '_ndrepr', None)
 
     """#####################  Properties for managing instance attributes  ######################"""
 

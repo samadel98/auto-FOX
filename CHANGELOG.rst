@@ -30,6 +30,8 @@ Unreleased
 * Stop using pandas features that pandas 4 will remove.
 * Add a ``slow`` pytest marker: ``pytest -m "not slow"`` skips the slowest tests.
 * Do not let a broken CAT install break ``import FOX``.
+* Drop the Nano-Utils and AssertionLib dependencies (AssertionLib is still used by the tests);
+  the few helpers Auto-FOX used from them are now part of Auto-FOX.
 * Test using CP2K 2026.2.
 
 
