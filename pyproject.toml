@@ -1,7 +1,7 @@
 # Minimum requirements for the build system to execute.
 [build-system]
 requires = [
-    "setuptools>=61.0",
+    "setuptools>=77.0",
     "setuptools_scm[toml]>=6.2",
 ]
 build-backend = "setuptools.build_meta"
@@ -13,7 +13,8 @@ dynamic = [
     "readme",
 ]
 description = "A library for analyzing potential energy surfaces (PESs) and using the resulting PES descriptors for constructing forcefield parameters."
-license = { file = "LICENSE" }
+license = "LGPL-3.0-only"
+license-files = ["LICENSE", "LICENSE-Apache-2.0.txt", "NOTICE"]
 authors = [
     { name = "Bas van Beek", email = "b.f.van.beek@vu.nl" },
 ]
@@ -30,7 +31,6 @@ keywords = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
     "Natural Language :: English",
     "Operating System :: Unix",
     "Operating System :: MacOS",
@@ -95,9 +95,6 @@ test-no-optional = [
     "pytest-cov",
     "assertionlib>=3.1.0",
 ]
-
-[tool.setuptools]
-license-files = ["LICENSE*.txt"]
 
 [tool.setuptools.packages.find]
 include = ["FOX*"]
