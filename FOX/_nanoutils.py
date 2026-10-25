@@ -29,6 +29,8 @@ import numpy as np
 import yaml
 from numpy.typing import ArrayLike, DTypeLike
 
+from ._compat import COPY_IF_NEEDED
+
 __all__ = [
     "PathType",
     "EMPTY_MAPPING",
@@ -192,7 +194,7 @@ def as_nd_array(
 
     """
     try:
-        return np.array(array, dtype=dtype, ndmin=ndmin, copy=True if copy else None)
+        return np.array(array, dtype=dtype, ndmin=ndmin, copy=True if copy else COPY_IF_NEEDED)
     except TypeError:
         if not isinstance(array, abc.Iterable):
             raise
