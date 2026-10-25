@@ -33,6 +33,8 @@ Unreleased
 * Drop the Nano-Utils and AssertionLib dependencies (AssertionLib is still used by the tests);
   the few helpers Auto-FOX used from them are now part of Auto-FOX.
 * Type-check the package with mypy in CI.
+* Declare the licence with the SPDX expression ``LGPL-3.0-only`` (PEP 639), and ship
+  ``LICENSE`` and ``NOTICE`` in the wheel next to ``LICENSE-Apache-2.0.txt``.
 * Fix ``MultiMolecule.concatenate`` and ``MultiMolecule.get_supercell``, which always raised an error.
 * Fix ``MultiMolecule.init_adf`` with ``periodic`` overwriting the lattice of the molecule.
 * Fix ``MultiMolecule.init_rdf``, ``init_debye`` and ``init_adf`` failing for ``range`` and
