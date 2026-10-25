@@ -18,7 +18,7 @@ API
 """  # noqa: E501
 
 from types import MappingProxyType
-from typing import Optional, Callable, Tuple, Mapping, TypedDict
+from typing import Optional, Callable, Tuple, Mapping, TypedDict, Literal
 
 
 __all__ = ['PRMMapping', 'CP2K_TO_PRM']
@@ -57,7 +57,9 @@ class PRMMapping(TypedDict):
 
     """  # noqa: E501
 
-    name: str
+    name: Literal[
+        'atoms', 'bonds', 'angles', 'dihedrals', 'nbfix', 'nonbonded', 'improper', 'impropers'
+    ]
     columns: Tuple[int, ...]
     key_path: Tuple[str, ...]
     key: Tuple[str, ...]

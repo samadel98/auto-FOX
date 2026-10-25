@@ -49,7 +49,7 @@ import pandas as pd
 
 from . import FileIter
 from ._top_concat import _TOPConcat
-from ..ff import degree_of_separation
+from ..ff.degree_of_separation import degree_of_separation
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -82,8 +82,8 @@ if TYPE_CHECKING:
     _DirectiveNames = _DFNames | _DFDictNames
 
     _DtypeMap = types.MappingProxyType[_T, np.dtype[np.void]]
-    _DFKwargs = dict[_DFNames, pd.DataFrame]
-    _DFDictKwargs = defaultdict[_DFDictNames, dict[int, pd.DataFrame]]
+    _DFKwargs = dict[str, pd.DataFrame]
+    _DFDictKwargs = defaultdict[str, dict[int, pd.DataFrame]]
 
 __all__ = ["TOPContainer", "TOPDirectiveWarning"]
 
@@ -438,7 +438,7 @@ class TOPContainer:
         return self._concatenate
 
     #: A mapping holding the data types of all mandatory directives.
-    DF_DTYPES: ClassVar[_DtypeMap[_DFNames]] = types.MappingProxyType({
+    DF_DTYPES: ClassVar[_DtypeMap[str]] = types.MappingProxyType({
         "defaults": np.dtype([
             ("nbfunc", "i8"),
             ("comb_rule", "i8"),
@@ -514,7 +514,7 @@ class TOPContainer:
 
     #: A mapping holding the data types of all optional (dictionary of dataframe based) directives.
     DF_DICT_DTYPES: ClassVar[
-        types.MappingProxyType[_DFDictNames, _DtypeMap[int]]
+        types.MappingProxyType[str, _DtypeMap[int]]
     ] = types.MappingProxyType({
         "pairtypes": types.MappingProxyType({
             1: _DF_DICT_DTYPES["pairtypes_1"],
@@ -649,7 +649,7 @@ class TOPContainer:
 
         elif (dtype_dict := cls.DF_DICT_DTYPES.get(name)) is not None:
             if attr is None:
-                return {}
+                return cast("_DFType", {})
             elif (
                 not isinstance(attr, dict)
                 or not all(isinstance(v, pd.DataFrame) for v in attr.values())

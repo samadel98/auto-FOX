@@ -138,7 +138,7 @@ try:
     from matplotlib.pyplot import Figure
     PLT_ERROR: Optional[ImportError] = None
 except ImportError as ex:
-    from FOX.type_alias import Figure
+    from FOX.type_alias import Figure  # type: ignore[assignment]
     PLT_ERROR = ex
 
 __all__ = ['get_best', 'overlay_descriptor', 'plot_descriptor']

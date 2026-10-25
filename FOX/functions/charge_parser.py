@@ -77,11 +77,11 @@ def _gt_lt_constraints(constrain: List[Union[str, float]]
                        ) -> Generator[Tuple[Tuple[str, str], float], None, None]:
     r"""Parse :math:`>`, :math:`<`, :math:`\ge` and :math:`\le`-type constraints."""
     minus = False
-    for i, j in enumerate(constrain):  # type: int, str  # type: ignore[assignment]
+    for i, j in enumerate(constrain):
         if j == '-':
             minus = True
             continue
-        if j not in _OPPERATOR_MAPPING:
+        if not isinstance(j, str) or j not in _OPPERATOR_MAPPING:
             continue
 
         operator, value, atom = _OPPERATOR_MAPPING[j], constrain[i-1], constrain[i+1]

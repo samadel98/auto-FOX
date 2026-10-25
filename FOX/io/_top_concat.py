@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence, Callable
-from typing import TYPE_CHECKING, Any, Literal, overload, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -12,8 +12,6 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray, ArrayLike
 
     from . import TOPContainer
-
-    _SCT = TypeVar("_SCT", bound=np.generic)
 
     _ArrayLikeInt = int | Sequence[int] | NDArray[np.integer[Any]]
     _ArrayLikeFloat = float | Sequence[float] | NDArray[np.integer[Any]] | NDArray[np.floating[Any]]
@@ -59,7 +57,7 @@ def _parse_object(arg: ArrayLike) -> NDArray[np.object_]:
     return array.astype(np.object_, copy=False)
 
 
-def _parse(arg: ArrayLike, dtype: np.dtype[_SCT]) -> NDArray[_SCT]:
+def _parse(arg: Any, dtype: np.dtype[Any]) -> NDArray[Any]:
     """Wrapper for validating dtype-specific array-likes."""
     if dtype.type == np.float64:
         return _parse_float(arg)
@@ -211,7 +209,7 @@ class _TOPConcat:
             "epsilon": _parse(epsilon, dtype["epsilon"]),
         }
 
-        array_dict = {k: _parse(kwargs[k], dtype[k]) for k in dtype.names}
+        array_dict = {k: _parse(kwargs[k], dtype[k]) for k in dtype.names or ()}
         try:
             df = pd.DataFrame(array_dict)
         except ValueError:
@@ -288,14 +286,14 @@ class _TOPConcat:
             raise ValueError(f"Invalid func value: {func!r}") from None
 
         kwargs.update({"atom1": atom1, "atom2": atom2, "func": func})
-        extra_keys = kwargs.keys() - set(dtype.names)
+        extra_keys = kwargs.keys() - set(dtype.names or ())
         if extra_keys:
             raise TypeError(
                 f"nonbond_params() got {len(extra_keys)} unexpected keyword argument(s): "
                 f"{', '.join(sorted(repr(i) for i in extra_keys))}"
             )
 
-        array_dict = {k: _parse(kwargs.get(k, 0), dtype[k]) for k in dtype.names}
+        array_dict = {k: _parse(kwargs.get(k, 0), dtype[k]) for k in dtype.names or ()}
         try:
             df = pd.DataFrame(array_dict)
         except ValueError:
@@ -364,7 +362,7 @@ class _TOPConcat:
             "mass": 0.0,
         }
 
-        array_dict = {k: _parse(kwargs[k], dtype[k]) for k in dtype.names}
+        array_dict = {k: _parse(kwargs[k], dtype[k]) for k in dtype.names or ()}
         try:
             df = pd.DataFrame(array_dict)
         except ValueError:
@@ -428,7 +426,7 @@ class _TOPConcat:
             "func": func,
         }
 
-        array_dict = {k: _parse(kwargs[k], dtype[k]) for k in dtype.names}
+        array_dict = {k: _parse(kwargs[k], dtype[k]) for k in dtype.names or ()}
         try:
             df = pd.DataFrame(array_dict)
         except ValueError:
@@ -478,7 +476,7 @@ class _TOPConcat:
             "func": func,
         }
 
-        array_dict = {k: _parse(kwargs[k], dtype[k]) for k in dtype.names}
+        array_dict = {k: _parse(kwargs[k], dtype[k]) for k in dtype.names or ()}
         try:
             df = pd.DataFrame(array_dict)
         except ValueError:

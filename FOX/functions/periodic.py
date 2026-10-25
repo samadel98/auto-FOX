@@ -15,7 +15,7 @@ API
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import TypeVar, Any, Sequence, Mapping, Union, Iterable, TYPE_CHECKING
+from typing import TypeVar, Any, Sequence, Mapping, Union, Iterable, TYPE_CHECKING, cast
 from itertools import chain
 
 import numpy as np
@@ -60,9 +60,9 @@ def parse_periodic(
         raise ValueError("Expected a non-empty array")
 
     if ar.dtype.kind == "U":
-        return _parse_char(ar)
+        return _parse_char(cast("NDArray[np.str_]", ar))
     elif ar.dtype.kind in "ui":
-        return _parse_int(ar)
+        return _parse_int(cast("NDArray[np.integer[Any]]", ar))
     else:
         raise TypeError(f"Invalid dtype: {ar.dtype}")
 

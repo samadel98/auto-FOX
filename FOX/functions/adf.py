@@ -52,7 +52,7 @@ def _adf_inner_cdktree(
     r_max: float,
     idx_list: Iterable[_3Tuple[NDArray[np.bool_]]],
     lattice: None | NDArray[f8],
-    periodicity: Iterable[Literal[0, 1, 2]] = range(3),
+    periodicity: Iterable[Literal[0, 1, 2]] = (0, 1, 2),
     weight: None | Callable[[NDArray[f8]], NDArray[f8]] = None,
 ) -> List[NDArray[f8]]:
     """Perform the loop of :meth:`.init_adf` with a distance cutoff."""
@@ -123,7 +123,7 @@ def _adf_inner(
     m: NDArray[f8],
     idx_list: Iterable[_3Tuple[NDArray[np.bool_]]],
     lattice: None | NDArray[f8],
-    periodicity: Iterable[Literal[0, 1, 2]] = range(3),
+    periodicity: Iterable[Literal[0, 1, 2]] = (0, 1, 2),
     weight: None | Callable[[NDArray[f8]], NDArray[f8]] = None,
 ) -> List[NDArray[f8]]:
     """Perform the loop of :meth:`.init_adf` without a distance cutoff."""
@@ -198,7 +198,7 @@ def get_adf_df(atom_pairs: Sequence[Hashable]) -> pd.DataFrame:
 
 def get_adf(
     ang: NDArray[np.integer[Any]],
-    weights: None | NDArray[np.number[Any]] = None,
+    weights: None | NDArray[np.integer[Any] | np.floating[Any]] = None,
 ) -> NDArray[f8]:
     r"""Calculate and return the angular distribution function (ADF).
 

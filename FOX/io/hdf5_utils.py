@@ -340,7 +340,7 @@ def _get_kwarg_dict2(armc: ARMC) -> Settings:
 """################################### Updating .hdf5 files ####################################"""
 
 
-def hdf5_clear_status(filename: PathType) -> Optional[subprocess.CompletedProcess[str]]:
+def hdf5_clear_status(filename: PathType) -> Optional[subprocess.CompletedProcess[bytes]]:
     """Run the :code:`h5clear -s filename` command if **filename** refuses to open.
 
     Raises
@@ -358,8 +358,8 @@ def hdf5_clear_status(filename: PathType) -> Optional[subprocess.CompletedProces
 
         name = fsdecode(filename)
         try:
-            return subprocess.run(f'h5clear -s {name!r}', shell=True, check=True)
-        except subprocess.CalledProcessError:
+            return subprocess.run(['h5clear', '-s', name], check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
             raise RuntimeError(f'Unable to open or reset {name!r}') from ex
 
 
@@ -594,7 +594,7 @@ def _get_dset(f: File, key: str) -> Union[pd.Series, pd.DataFrame, List[pd.DataF
 
     elif f[key].ndim == 3:
         data = _read_chunked(f, key)
-        data = data.reshape(np.prod(data.shape[:-1]), -1)
+        data = data.reshape(int(np.prod(data.shape[:-1])), -1)
         columns = pd.MultiIndex.from_product([[key], np.arange(data.shape[-1])])
         return pd.DataFrame(data, columns=columns)
 

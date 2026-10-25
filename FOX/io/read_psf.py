@@ -274,9 +274,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
 
         # Print options for NumPy ndarrays and Pandas DataFrames
         self.np_printoptions: Dict[str, Any] = {'threshold': 20, 'edgeitems': 5}
-        self.pd_printoptions: Dict[str, Any] = cast(
-            Iterator[Tuple[str, Any]], {'display.max_rows': 10}
-        )
+        self.pd_printoptions = {'display.max_rows': 10}
 
     @property
     def np_printoptions(self) -> Dict[str, Any]:
@@ -437,7 +435,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
     def no_nonbonded(self, value: Iterable):
         self._set_nd_array('_no_nonbonded', value, 2, np.int64)
 
-    def _set_nd_array(self, name: str, value: Optional[np.ndarray],
+    def _set_nd_array(self, name: str, value: Optional[Iterable[Any]],
                       ndmin: int, dtype: type) -> None:
         """Assign an array-like object (**value**) to the **name** attribute as ndarray.
 
@@ -463,10 +461,10 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             Raised if value array construction was unsuccessful.
 
         """
-        _value = [] if value is None else value
+        _value: Iterable[Any] = [] if value is None else value
 
         try:
-            array = np.array(_value, dtype=dtype, ndmin=ndmin, copy=COPY_IF_NEEDED)
+            array: np.ndarray = np.array(_value, dtype=dtype, ndmin=ndmin, copy=COPY_IF_NEEDED)
         except TypeError:  # **value** is an iterator
             array = np.fromiter(_value, dtype=dtype)
         if ndmin == 2:
@@ -618,8 +616,7 @@ class PSFContainer(AbstractDataClass, AbstractFileContainer):
             # Cast into a flattened array of indices
             else:
                 ar = np.fromiter(chain.from_iterable(value), dtype=int)
-                ar = ar.reshape(-1, cls._SHAPE_DICT[key]['shape'])
-                psf_dict[key] = ar
+                psf_dict[key] = ar.reshape(-1, cls._SHAPE_DICT[key]['shape'])
 
         return psf_dict
 

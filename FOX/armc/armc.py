@@ -22,7 +22,7 @@ from itertools import repeat
 from typing import (
     Tuple, TYPE_CHECKING, Any, Optional, Iterable, Mapping, Callable,
     overload, Dict, List, ClassVar, Collection,
-    Literal,
+    Literal, cast,
 )
 
 import h5py
@@ -138,7 +138,8 @@ class ARMC(MonteCarloABC):
         if self.molecule[0].lattice is not None:
             ret['job']['lattice'] = lat_lst = []
             iterator1 = (
-                (m, MultiMolecule(m.lattice, atoms={"Xx": range(3)})) for m in self.molecule
+                (m, MultiMolecule(cast(np.ndarray, m.lattice), atoms={"Xx": range(3)}))
+                for m in self.molecule
             )
             for m, lat_mol in iterator1:
                 filename = m.properties.filename.replace(".xyz", ".lattice.xyz")
@@ -313,7 +314,7 @@ class ARMC(MonteCarloABC):
         return self.get_pes_descriptors()
 
     def _do_inner3(self, pes_new: PesMapping, pes_validation: PesMapping,
-                   key_old: Key) -> Tuple[float, np.ndarray, np.ndarray]:
+                   key_old: Key) -> Tuple[np.float64, np.ndarray, np.ndarray]:
         """Evaluate the auxiliary error; accept if the new parameter set lowers the error."""
         self.logger.info("Calculating auxiliary error")
 
@@ -323,7 +324,7 @@ class ARMC(MonteCarloABC):
         error_change = (aux_new - aux_old).sum()
         return error_change, aux_new, aux_validation
 
-    def _do_inner4(self, accept: bool, error_change: float, aux_new: np.ndarray,
+    def _do_inner4(self, accept: bool | np.bool_, error_change: float, aux_new: np.ndarray,
                    key_new: Key, key_old: Key, kappa: int, omega: int) -> Key:
         """Update the auxiliary error history, apply phi & update job settings."""
         err_round = round(error_change, 4)
@@ -341,7 +342,7 @@ class ARMC(MonteCarloABC):
             self[key_old] = self.apply_phi(self[key_old])
             return key_old
 
-    def _do_inner5(self, mol_list: Optional[MolCollection], accept: bool,
+    def _do_inner5(self, mol_list: Optional[MolCollection], accept: np.bool_ | np.ndarray,
                    aux_new: np.ndarray, aux_validation: np.ndarray,
                    pes_new: PesMapping, pes_validation: PesMapping,
                    kappa: int, omega: int) -> None:
@@ -382,7 +383,7 @@ class ARMC(MonteCarloABC):
         return key
 
     def to_hdf5(self, mol_list: Optional[MolCollection],
-                accept: np.bool_, aux_new: np.ndarray, aux_validation: np.ndarray,
+                accept: np.bool_ | np.ndarray, aux_new: np.ndarray, aux_validation: np.ndarray,
                 pes_new: PesMapping, pes_validation: PesMapping,
                 kappa: int, omega: int) -> None:
         r"""Construct a dictionary with the **hdf5_kwarg** and pass it to :func:`.to_hdf5`.
@@ -415,10 +416,11 @@ class ARMC(MonteCarloABC):
         self.logger.info(f"Exporting results to {os.path.basename(self.hdf5_file)!r}\n")
 
         phi = self.phi.phi
+        iterator: Iterable[str]
         if accept.size == 1:
             iterator = repeat(('param' if accept else 'param_old'), len(self.param.param.columns))
         else:
-            iterator = ('param' if acc else 'param_old' for acc in accept)
+            iterator = ('param' if acc else 'param_old' for acc in np.asarray(accept))
         _aux_error_mod = [getattr(self.param, n)[i].values for i, n in enumerate(iterator)]
         aux_error_mod = np.empty((len(self.param.param.columns), 1 + len(_aux_error_mod[0])))
         aux_error_mod[..., :-1] = _aux_error_mod
@@ -466,7 +468,8 @@ class ARMC(MonteCarloABC):
             An array with :math:`m*n` auxilary errors
 
         """
-        pes_dict_ref = self.pes if not validation else self.pes_validation
+        # The PES descriptors are `functools.partial` objects with extra attributes
+        pes_dict_ref: Mapping[str, Any] = self.pes if not validation else self.pes_validation
 
         length = 1 + max((int(k.rsplit('.')[-1]) for k in pes_dict.keys()), default=0)
 
@@ -475,10 +478,9 @@ class ARMC(MonteCarloABC):
             for k, v in pes_dict.items()
         )
         ret = np.fromiter(generator, dtype=float, count=len(pes_dict))
-        ret = ret.reshape(length, -1)
-        return ret
+        return ret.reshape(length, -1)
 
-    def restart(self) -> None:
+    def restart(self) -> None:  # type: ignore[override]
         r"""Restart a previously started Addaptive Rate Monte Carlo procedure."""
         # Validate the xyz .hdf5 file; create a new one if required
         xyz = _get_filename_xyz(self.hdf5_file)
@@ -495,10 +497,11 @@ class ARMC(MonteCarloABC):
             self.logger.warning(f"Unable to open {self.hdf5_file!r}, "
                                 "file status was forcibly reset")
 
-        i, j, key, acceptance = self._restart_from_hdf5()
+        i, j, key_list, acceptance = self._restart_from_hdf5()
         cls = type(self)
+        key: Any = key_list
         if not cls.HAS_LOOP:
-            key = key[0]
+            key = key_list[0]
             acceptance = acceptance[..., 0]
 
         # Finish the current set of sub-iterations

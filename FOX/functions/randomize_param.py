@@ -22,7 +22,7 @@ __all__ = ['randomize']
 def randomize(val: np.ndarray,
               val_max: Optional[np.ndarray] = None,
               val_min: Optional[np.ndarray] = None,
-              n: float = 2.0) -> None:
+              n: float = 2.0) -> np.ndarray:
     """Randomize the values in **val**.
 
     Parameters
@@ -30,12 +30,12 @@ def randomize(val: np.ndarray,
     val : array-like [:class:`float`], shape :math:`(m,)`
         An array-like object containing the to-be randomized values.
 
-    val_min : array-like [:class:`float`], shape :math:`(m,)`, optional
-        An optional array-like with the new lower bounds of the to-be randomized values.
-        Supplying a scalar will set the same lower bound for all values.
+    val_max : array-like [:class:`float`], shape :math:`(m,)`, optional
+        An optional array-like with the new upper bounds of the to-be randomized values.
+        Supplying a scalar will set the same upper bound for all values.
 
     val_min : array-like [:class:`float`], shape :math:`(m,)`, optional
-        An optional array-like with the new upper bounds of the to-be randomized values.
+        An optional array-like with the new lower bounds of the to-be randomized values.
         Supplying a scalar will set the same lower bound for all values.
 
     n : :class:`float`
@@ -54,7 +54,7 @@ def randomize(val: np.ndarray,
 
     # Parse the extremites
     val_max_ = _parse_extremite(val, val_max, n, or_func=np.minimum)
-    val_min_ = _parse_extremite(val, val_max, 1/n, or_func=np.maximum)
+    val_min_ = _parse_extremite(val, val_min, 1/n, or_func=np.maximum)
 
     # Construct new random values
     val_new = np.random.rand(len(val))
@@ -73,10 +73,11 @@ def _parse_extremite(val: np.ndarray, val_extreme: Optional[np.ndarray],
     if val_extreme is None:
         return val * n
 
-    ret = np.array(val_extreme)
+    ret = np.array(val_extreme, dtype=np.float64)
     isinf = np.isinf(ret)
     if ret.size == 1:
         return or_func(val * n, ret)
 
     ret[isinf] = val[isinf] * n
     ret[~isinf] = or_func(ret[~isinf], val[~isinf] * n)
+    return ret

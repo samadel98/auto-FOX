@@ -60,13 +60,13 @@ MAX_SEED = 2**63 - 1
 
 
 def _template_func1(_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-    _mol, _, *args = args
-    return _func(_mol, *args, **kwargs)
+    _mol, _, *rest = args
+    return _func(_mol, *rest, **kwargs)
 
 
 def _template_func2(_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-    _, _result, *args = args
-    return _func(_result, *args, **kwargs)
+    _, _result, *rest = args
+    return _func(_result, *rest, **kwargs)
 
 
 class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
@@ -205,8 +205,8 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         elif value.molecule[0].lattice is not None:
             return False
 
-        iterator1 = ((v, value.pes[k]) for k, v in self.pes.items())
-        for p1, p2 in iterator1:  # type: partial, partial  # type: ignore
+        iterator1 = ((cast(partial, v), cast(partial, value.pes[k])) for k, v in self.pes.items())
+        for p1, p2 in iterator1:
             if p1.func != p2.func or p1.keywords != p2.keywords:
                 return False
 

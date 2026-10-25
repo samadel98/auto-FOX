@@ -60,7 +60,7 @@ class LJDataFrame(pd.DataFrame):
     """A subclass of :class:`pandas.DataFrame` aimed at holding forcefield parameters."""
 
     def __init__(self, data: Union[None, float, Iterable] = None,
-                 index: Iterable[str] = None,
+                 index: Optional[Iterable[str]] = None,
                  columns: None = None,
                  dtype: Union[None, str, type, np.dtype] = None,
                  copy: bool = False) -> None:

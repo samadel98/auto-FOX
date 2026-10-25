@@ -141,6 +141,29 @@ jobs:
             -   name: Run pydocstyle
                 run: pydocstyle FOX
 
+    Type-check:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@v7
+                with:
+                    fetch-depth: 0
+                    persist-credentials: false
+
+            -   name: Set up Python on ubuntu-latest
+                uses: actions/setup-python@v7
+                with:
+                    python-version: "3.13"
+
+            -   name: Install dependencies
+                # mypy is pinned so that a new release can't turn the job red on its own
+                run: pip install -e . "mypy==2.4.0" types-PyYAML
+
+            -   name: Installed packages
+                run: pip list
+
+            -   name: Run mypy
+                run: mypy FOX
+
     Docs:
         runs-on: ubuntu-latest
         steps:
