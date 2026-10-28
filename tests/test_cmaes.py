@@ -154,6 +154,24 @@ def test_cmaes_restart(n_results: int, tmp_path: Path) -> None:
         assertion.eq(f1.attrs['initial_error'], f2.attrs['initial_error'])
 
 
+def test_cmaes_to_param(tmp_path: Path) -> None:
+    """Test that the parameters of a candidate do not depend on the memory layout of the map.
+
+    The map is C-ordered after a restart (read from the .hdf5 file),
+    while the matrix product of BLAS can differ in the last bit between memory layouts.
+
+    """
+    armc, _ = _get_cmaes(tmp_path, 'run')
+    armc._offset, transform, x0 = armc._get_transform()
+    rng = np.random.default_rng(0)
+    for x in x0 + 0.1 * rng.standard_normal((100, len(x0))):
+        armc._transform = np.asfortranarray(transform)
+        p_f = armc._to_param(x)
+        armc._transform = np.ascontiguousarray(transform)
+        np.testing.assert_array_equal(armc._to_param(x), p_f)
+        np.testing.assert_allclose(p_f, armc._offset + transform @ x, rtol=0, atol=1e-14)
+
+
 def _use_quadratic_error(armc: CMAES, factor: np.ndarray) -> None:
     """Replace the MD jobs and PES descriptors of **armc** by a quadratic function.
 

@@ -295,6 +295,19 @@ class CMAES(ARMC):
         transform = np.array(columns, dtype=np.float64).reshape(-1, n_var).T
         return offset, transform, np.array(x0, dtype=np.float64)
 
+    def _to_param(self, x: np.ndarray) -> np.ndarray:
+        """Return the variable parameters of the CMA-ES candidate **x**: ``offset + transform @ x``.
+
+        The product is summed column by column rather than with BLAS, whose summation order
+        can depend on the memory layout of **transform** (which differs after reading it from
+        the .hdf5 file), so a restarted run reproduces the parameters bit for bit.
+
+        """  # noqa: E501
+        ret = self._offset.copy()
+        for column, x_i in zip(self._transform.T, x):
+            ret += column * x_i
+        return ret
+
     def _bounds(self) -> Tuple[np.ndarray, np.ndarray]:
         """Return the lower and upper bounds of the variable parameters."""
         idx = self._variable_index()
@@ -310,7 +323,7 @@ class CMAES(ARMC):
                              "is free to vary; the net charge and charge constraints fix all "
                              "variable charges")
         lower, upper = self._bounds()
-        if not self._in_bounds(self._offset + self._transform @ x0, lower, upper):
+        if not self._in_bounds(self._to_param(x0), lower, upper):
             raise ValueError("The initial parameters are not within their bounds "
                              "after meeting the net charge and charge constraints")
 
@@ -479,7 +492,7 @@ class CMAES(ARMC):
         Returns :data:`False` if a parameter of **x** is outside its bounds.
 
         """
-        p = self._offset + self._transform @ x
+        p = self._to_param(x)
         lower, upper = self._bounds()
         if not self._in_bounds(p, lower, upper):
             self.logger.debug(f"Redrawing candidate {i}: a charge is outside its bounds")
@@ -492,7 +505,7 @@ class CMAES(ARMC):
         es = self._es
         assert es is not None
         idx = self._variable_index()
-        mean = self._offset + self._transform @ es.result.xfavorite
+        mean = self._to_param(es.result.xfavorite)
         for i in self.param.param_old.columns:
             self.param.param_old.loc[idx, i] = mean
 
