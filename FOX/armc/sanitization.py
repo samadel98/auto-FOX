@@ -277,6 +277,15 @@ def get_phi(dct: PhiMapping) -> PhiUpdater:
     phi_dict = validate_phi(dct)
     phi_type = phi_dict.pop('type')  # type: ignore[misc]
     kwargs = phi_dict.pop('kwargs')  # type: ignore[misc]
+    if isinstance(phi_dict['phi'], str):
+        # `phi: auto`; the actual value is set once the error of the initial parameters is known.
+        # One value per parameter set, as many as `gamma` or `a_target` has
+        n = max(len(phi_dict['gamma']), len(phi_dict['a_target']))
+        for k in ('gamma', 'a_target'):
+            if len(phi_dict[k]) == 1:  # type: ignore[literal-required]
+                phi_dict[k] = np.repeat(phi_dict[k], n)  # type: ignore[literal-required]
+        phi_dict['phi'] = np.ones(n)
+        kwargs = {**kwargs, 'auto': True}
     return phi_type(**phi_dict, **kwargs)  # type: ignore[return-value]
 
 

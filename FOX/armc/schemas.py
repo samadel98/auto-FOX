@@ -133,8 +133,9 @@ phi_schema = Schema({
 
     Optional_('phi', default=lambda: PHI.copy()): Or(
         And(None, Default(PHI.copy)),
+        And(str, lambda n: n.lower() == 'auto', Use(lambda n: 'auto')),
         And(Use(array)),
-        error=Formatter(f"'phi.phi' expected a float{EPILOG}")
+        error=Formatter(f"'phi.phi' expected a float, a sequence of floats or 'auto'{EPILOG}")
     ),
 
     Optional_('gamma', default=lambda: GAMMA.copy()): Or(
@@ -172,7 +173,7 @@ class PhiMapping(TypedDict, total=False):
     """A :class:`~typing.TypedDict` representing the input of :data:`phi_schema`."""
 
     type: Union[None, str, Type[PhiUpdaterABC]]
-    phi: Union[None, ArrayLike, Iterable[Scalar]]
+    phi: Union[None, str, ArrayLike, Iterable[Scalar]]
     gamma: Union[None, ArrayLike, Iterable[Scalar]]
     a_target: Union[None, ArrayLike, Iterable[Scalar]]
     func: Union[None, str, PhiFunc]
@@ -183,11 +184,40 @@ class PhiDict(TypedDict):
     """A :class:`~typing.TypedDict` representing the output of :data:`phi_schema`."""
 
     type: Type[PhiUpdaterABC]
-    phi: np.ndarray
+    phi: Union[np.ndarray, Literal['auto']]
     gamma: np.ndarray
     a_target: np.ndarray
     func: PhiFunc
     kwargs: Mapping[str, Any]
+
+
+def _not_bool(value: object) -> bool:
+    return not isinstance(value, (bool, np.bool_))
+
+
+#: Schema for validating the ``"monte_carlo.stop"`` block.
+stop_schema = Schema({
+    Optional_('target_error', default=None): Or(
+        None,
+        And(_not_bool, supports_float, lambda n: 0 <= float(n) < np.inf, Use(float)),
+        error=Formatter(f"'monte_carlo.stop.target_error' expected None or "
+                        f"a non-negative float{EPILOG}")
+    ),
+
+    Optional_('patience', default=None): Or(
+        None,
+        And(_not_bool, supports_int, lambda n: int(n) > 0, Use(int)),
+        error=Formatter(f"'monte_carlo.stop.patience' expected None or "
+                        f"a positive integer{EPILOG}")
+    ),
+
+    Optional_('max_hours', default=None): Or(
+        None,
+        And(_not_bool, supports_float, lambda n: 0 < float(n) < np.inf, Use(float)),
+        error=Formatter(f"'monte_carlo.stop.max_hours' expected None or "
+                        f"a positive float{EPILOG}")
+    ),
+}, name='stop_schema', description='Schema for validating the "monte_carlo.stop" block.')
 
 
 #: Schema for validating the ``"monte_carlo"`` block.
@@ -253,7 +283,35 @@ mc_schema = Schema({
             f"'monte_carlo.seed' expected an integer in [0, {MAX_SEED}] or None{EPILOG}"
         )
     ),
+
+    Optional_('n_jobs', default=1): Or(
+        And(None, Default(1)),
+        And(_not_bool, supports_int, lambda n: int(n) > 0, Use(int)),
+        error=Formatter(f"'monte_carlo.n_jobs' expected a positive integer{EPILOG}")
+    ),
+
+    Optional_('stop', default=lambda: stop_schema.validate({})): Or(
+        And(None, Use(lambda n: stop_schema.validate({}))),
+        And(abc.Mapping, Use(lambda n: stop_schema.validate(dict(n)))),
+        error=Formatter(f"'monte_carlo.stop' expected None or a Mapping{EPILOG}")
+    ),
 }, name='mc_schema', description='Schema for validating the "monte_carlo" block.')
+
+
+class StopMapping(TypedDict, total=False):
+    """A :class:`~typing.TypedDict` representing the input of :data:`stop_schema`."""
+
+    target_error: Union[None, str, SupportsFloat]
+    patience: Union[None, str, SupportsInt]
+    max_hours: Union[None, str, SupportsFloat]
+
+
+class StopDict(TypedDict):
+    """A :class:`~typing.TypedDict` representing the output of :data:`stop_schema`."""
+
+    target_error: Optional[float]
+    patience: Optional[int]
+    max_hours: Optional[float]
 
 
 class MCMapping(TypedDict, total=False):
@@ -268,6 +326,8 @@ class MCMapping(TypedDict, total=False):
     folder: Union[None, str, bytes, os.PathLike]
     keep_files: Optional[bool]
     seed: Union[None, str, bytes, SupportsInt]
+    n_jobs: Union[None, str, bytes, SupportsInt]
+    stop: Optional[StopMapping]
 
 
 class MCDict(TypedDict):
@@ -282,6 +342,8 @@ class MCDict(TypedDict):
     folder: str
     keep_files: bool
     seed: Optional[int]
+    n_jobs: int
+    stop: StopDict
 
 
 #: Schema for validating the ``"psf"`` block.

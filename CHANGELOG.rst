@@ -42,6 +42,17 @@ Unreleased
 * Fix ``FOX.functions.randomize_param.randomize`` ignoring ``val_min`` and failing for ``val_max``.
 * Fix ``FOX.logger.get_logger`` failing without ``handlers``; it now defaults to a ``StreamHandler``.
 * Test using CP2K 2026.2.
+* Add ``monte_carlo.stop`` with the ``target_error``, ``patience`` and ``max_hours`` criteria,
+  which end an ARMC run before it runs out of iterations.
+* Add ``monte_carlo.n_jobs``, which runs the MD jobs of one ARMC iteration in parallel.
+* Add ``phi: auto``, which sets the initial ARMC phi from the error of the initial parameters.
+* Store the error of the initial parameters and the reason for stopping in the ARMC .hdf5 file.
+* Fix ARMC-PT with more than one PES descriptor mixing up the errors of its parameter sets.
+* Fix ARMC-PT restarts losing the phi settings and move ranges swapped between parameter sets.
+* Fix ARMC restarts with more than one PES descriptor or molecule restoring only part of the error.
+* Fix the error labels in the ARMC .hdf5 file not matching the errors when there is more than
+  one PES descriptor.
+* Fix ``FOX.armc.armc_pt.swap_random(..., weighted=True)`` raising an error.
 
 
 1.0.0

@@ -5,6 +5,7 @@ Index
     MonteCarloABC
     ARMC
     ARMCPT
+    StopCriteria
 
 API
 ---
@@ -13,4 +14,6 @@ API
 .. autoclass:: ARMC
     :members:
 .. autoclass:: ARMCPT
+    :members:
+.. autoclass:: StopCriteria
     :members:

@@ -117,6 +117,7 @@ monte_carlo:
     path: tests/test_files
     folder: _ARMCPT
     keep_files: True
+    n_jobs: 3
 
 phi:
     type: FOX.armc.PhiUpdater
