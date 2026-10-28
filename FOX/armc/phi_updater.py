@@ -41,7 +41,7 @@ IterOrArrayLike = Union[Scalar, Iterable[Scalar], ArrayLike]
 
 class _PhiDict(TypedDict):
     type: str
-    phi: List[float]
+    phi: Union[List[float], str]
     gamma: List[float]
     a_target: List[float]
     func: str
@@ -80,6 +80,9 @@ class PhiUpdaterABC(AbstractDataClass, ABC, Sized):
         The callable used for applying :math:`\phi` to the auxiliary error.
         The callable should take an array-like object and a :class:`numpy.ndarray`
         as arguments and return a new array.
+    auto : :class:`bool`
+        Whether :attr:`phi` is set from the error of the initial parameters
+        once the optimization starts (``phi.phi = "auto"`` in the .yaml input).
 
     """
 
@@ -111,7 +114,7 @@ class PhiUpdaterABC(AbstractDataClass, ABC, Sized):
     def __init__(self, phi: IterOrArrayLike,
                  gamma: IterOrArrayLike,
                  a_target: IterOrArrayLike,
-                 func: _PhiFunc, **kwargs: Any) -> None:
+                 func: _PhiFunc, *, auto: bool = False, **kwargs: Any) -> None:
         r"""Initialize an :class:`AbstractPhiUpdater` instance.
 
         Parameters
@@ -130,6 +133,9 @@ class PhiUpdaterABC(AbstractDataClass, ABC, Sized):
             The callable should take an array-like object and a :class:`numpy.ndarray`
             as arguments and return a new array.
             See :attr:`AbstractPhiUpdater.func`.
+        auto : :class:`bool`
+            Whether **phi** is to be set from the error of the initial parameters.
+            See :attr:`AbstractPhiUpdater.auto`.
         \**kwargs : :data:`~typing.Any`
             Further keyword arguments for **func**
 
@@ -140,6 +146,7 @@ class PhiUpdaterABC(AbstractDataClass, ABC, Sized):
         self.__qualname__: str = cls.__qualname__
 
         self.phi = cast(np.ndarray, phi)
+        self.auto = bool(auto)
         self._gamma = as_nd_array(gamma, dtype=float, ndmin=1, copy=True)
         self._a_target = as_nd_array(a_target, dtype=float, ndmin=1, copy=True)
 
@@ -226,7 +233,7 @@ class PhiUpdaterABC(AbstractDataClass, ABC, Sized):
 
         return {
             'type': f'{cls.__module__}.{cls.__name__}',
-            'phi': self.phi.tolist(),
+            'phi': 'auto' if self.auto else self.phi.tolist(),
             'gamma': self.gamma.tolist(),
             'a_target': self.a_target.tolist(),
             'func': f'{module}.{name}',

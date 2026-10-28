@@ -129,7 +129,7 @@ def create_hdf5(filename: PathType, armc: ARMC) -> None:
     # Store the *index*, *column* and *name* attributes of dataframes/series in the hdf5 file
     kappa = armc.iter_len // armc.sub_iter_len
     idx = armc.param.param[0].index.append(pd.MultiIndex.from_tuples([('', 'phi', '')]))
-    aux_error_idx = sorted(armc.pes.keys())
+    aux_error_idx = list(armc.pes.keys())
 
     pd_dict = {
         'aux_error': pd.Series(np.nan, index=aux_error_idx, name='aux_error'),
@@ -138,7 +138,7 @@ def create_hdf5(filename: PathType, armc: ARMC) -> None:
         'phi': pd.Series(np.nan, index=np.arange(kappa), name='phi'),
     }
     pd_dict2 = {
-        'aux_error': pd.Series(np.nan, index=sorted(armc.pes_validation.keys()), name='aux_error'),
+        'aux_error': pd.Series(np.nan, index=list(armc.pes_validation.keys()), name='aux_error'),
     }
 
     lst = [(armc.pes, pd_dict), (armc.pes_validation, pd_dict2)]
@@ -450,6 +450,11 @@ def to_hdf5(filename: PathType, dset_dict: Mapping[str, np.ndarray],
                 dset = f[key]
                 if key == 'phi':
                     dset[kappa] = np.asarray(value, dtype=dset.dtype)
+                elif key in {'aux_error', 'validation/aux_error'}:
+                    # Ordered by PES descriptor, then by molecule or parameter set;
+                    # see the ``"index"`` attribute of the dataset
+                    ar = np.asarray(value, dtype=dset.dtype)
+                    dset[kappa, omega] = ar.reshape(dset.shape[2:])
                 else:
                     dset[kappa, omega] = np.asarray(value, dtype=dset.dtype)
             except Exception as ex:

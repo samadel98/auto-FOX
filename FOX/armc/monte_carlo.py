@@ -16,6 +16,7 @@ API
 from __future__ import annotations
 
 import copy
+import time
 import secrets
 import operator
 import warnings
@@ -34,6 +35,7 @@ import numpy as np
 from qmflows.packages import Result
 from qmflows.warnings_qmflows import QMFlows_Warning
 
+from .stop_criteria import StopCriteria
 from .._dataclass import AbstractDataClass
 from .._nanoutils import EMPTY_MAPPING
 from ..logger import DEFAULT_LOGGER
@@ -79,8 +81,10 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
     pes: Dict[str, GetPesDescriptor]
     pes_validation: Dict[str, GetPesDescriptor]
     swap_phi: Optional[Callable[..., Any]]
+    stop: StopCriteria
+    stop_reason: Optional[str]
     HAS_LOOP: ClassVar[bool] = False
-    _PRIVATE_ATTR = frozenset({'_rng'})  # type: ignore
+    _PRIVATE_ATTR = frozenset({'_rng', '_start_time'})  # type: ignore
 
     @property
     def seed(self) -> int:
@@ -91,6 +95,20 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
     def rng(self) -> np.random.Generator:
         """Get the random number generator used for the Monte Carlo moves."""
         return self._rng
+
+    @property
+    def n_jobs(self) -> int:
+        """Get or set the number of jobs that are allowed to run at the same time."""
+        return self._n_jobs
+
+    @n_jobs.setter
+    def n_jobs(self, value: int) -> None:
+        if isinstance(value, (bool, np.bool_)):
+            raise TypeError("'n_jobs' expected an integer; observed type: 'bool'")
+        n_jobs = operator.index(value)
+        if n_jobs < 1:
+            raise ValueError(f"'n_jobs' expected a positive integer; observed value: {value!r}")
+        self._n_jobs = n_jobs
 
     @property
     def molecule(self) -> Tuple[MultiMolecule, ...]:
@@ -133,12 +151,20 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
                  logger: Optional[Logger] = None,
                  pes_post_process: Optional[Iterable[PostProcess]] = None,
                  seed: Optional[int] = None,
+                 n_jobs: int = 1,
+                 stop: Union[None, StopCriteria, Mapping[str, Any]] = None,
                  **kwargs: Any) -> None:
         """Initialize a :class:`MonteCarlo` instance.
 
         **seed** is the seed of the random number generator used for picking moves;
         a random seed is drawn if ``None``.
         Running the same input with the same seed gives the same sequence of moves.
+
+        **n_jobs** is the number of jobs (*e.g.* CP2K calculations) that are allowed to
+        run at the same time.
+
+        **stop** holds the criteria for stopping the optimization early
+        (see :class:`~FOX.armc.StopCriteria`).
 
         """
         if kwargs:
@@ -164,6 +190,19 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         self.molecule = cast(Tuple[MultiMolecule, ...], molecule)
         self.package_manager = package_manager
         self.keep_files = keep_files
+        self.n_jobs = n_jobs
+
+        # Settings for stopping early
+        if stop is None:
+            self.stop = StopCriteria()
+        elif isinstance(stop, StopCriteria):
+            self.stop = stop
+        else:
+            self.stop = StopCriteria(**stop)
+        self.stop_reason = None
+        self._best_error = np.inf
+        self._best_kappa = -1
+        self._start_time = time.monotonic()
         self.pes_post_process = cast(Tuple[PostProcess, ...], pes_post_process)
 
         # HDF5 settings
@@ -393,7 +432,7 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
             Will return :data:`None` if one of the jobs crashed
 
         """
-        return self.package_manager(logger=self.logger)
+        return self.package_manager(logger=self.logger, n_processes=self.n_jobs)
 
     def move(self, idx: Optional[int] = None) -> Union[Exception, Key]:
         """Update a random parameter in **self.param** by a random value from **self.move.range**.

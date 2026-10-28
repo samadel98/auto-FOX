@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import json
+import time
 from pathlib import Path
 from itertools import repeat
 from typing import (
@@ -32,7 +33,8 @@ from .monte_carlo import MonteCarloABC
 from ..classes.multi_mol import MultiMolecule
 from ..type_hints import ArrayOrScalar
 from ..io.hdf5_utils import (
-    create_hdf5, to_hdf5, create_xyz_hdf5, _get_filename_xyz, hdf5_clear_status
+    create_hdf5, to_hdf5, create_xyz_hdf5, _get_filename_xyz, hdf5_clear_status,
+    hdf5_availability,
 )
 
 if TYPE_CHECKING:
@@ -76,6 +78,10 @@ class ARMC(MonteCarloABC):
     sub_iter_len: int
     phi: PhiUpdater
     HAS_LOOP: ClassVar[Literal[False]] = False
+
+    #: With ``phi.phi = "auto"``, the fraction of the initial error that :math:`\phi`
+    #: adds to the error of the current parameters in every iteration.
+    AUTO_PHI_FRACTION: ClassVar[float] = 0.01
 
     @property
     def super_iter_len(self) -> int:
@@ -158,6 +164,8 @@ class ARMC(MonteCarloABC):
             'logfile': logfile,
             'hdf5_file': self.hdf5_file,
             'seed': self.seed,
+            'n_jobs': self.n_jobs,
+            'stop': self.stop.to_yaml_dict(),
         }
 
         # Parse the `pes` and `pes_validation` blocks
@@ -208,9 +216,11 @@ class ARMC(MonteCarloABC):
         """Initialize the Addaptive Rate Monte Carlo procedure."""
         key_new = self._parse_call(start, key_new)
         start_ = start if start is not None else 0
+        self._main_loop(start_, key_new)
 
-        # Start the main loop
-        for kappa in range(start_, self.super_iter_len):
+    def _main_loop(self, start: int, key_new: Any) -> None:
+        """Run the super-iterations from **start** onwards, or until a stop criterion is met."""
+        for kappa in range(start, self.super_iter_len):
             acceptance = self.acceptance()
             create_xyz_hdf5(self.hdf5_file, self.molecule,
                             iter_len=self.sub_iter_len,
@@ -218,11 +228,58 @@ class ARMC(MonteCarloABC):
 
             for omega in range(self.sub_iter_len):
                 key_new = self.do_inner(kappa, omega, acceptance, key_new)
+                if self._stop_after_iteration(kappa, omega):
+                    return
             self._end_super_iter(acceptance)
+            if self._stop_after_super_iteration(kappa):
+                return
 
     def _end_super_iter(self, acceptance: np.ndarray) -> None:
         r"""Update :math:`\phi` at the end of a super-iteration."""
         self.phi.update(acceptance)
+
+    # Stopping early
+
+    def _error_totals(self, aux_error: np.ndarray) -> np.ndarray:
+        """Return the total error of each parameter set in **aux_error**."""
+        return np.array([np.sum(aux_error)])
+
+    def _update_best_error(self, aux_error: np.ndarray, kappa: int) -> None:
+        """Keep track of the lowest error found so far and the super-iteration it was found in."""
+        error = np.min(self._error_totals(aux_error))
+        if error < self._best_error:
+            self._best_error = float(error)
+            self._best_kappa = kappa
+
+    def _stop_after_iteration(self, kappa: int, omega: int) -> bool:
+        """Check if the optimization should stop after iteration (**kappa**, **omega**)."""
+        if (kappa, omega) == (self.super_iter_len - 1, self.sub_iter_len - 1):
+            return False  # The run is over anyway; this is not an early stop
+        hours = (time.monotonic() - self._start_time) / 3600
+        return self._set_stop_reason(self.stop.check_iteration(self._best_error, hours))
+
+    def _stop_after_super_iteration(self, kappa: int) -> bool:
+        """Check if the optimization should stop after super-iteration **kappa**."""
+        if kappa == self.super_iter_len - 1:
+            return False
+        reason = self.stop.check_super_iteration(kappa - self._best_kappa)
+        return self._set_stop_reason(reason)
+
+    def _set_stop_reason(self, reason: Optional[str]) -> bool:
+        """Log **reason** and store it in the .hdf5 file; return whether there is a reason."""
+        if reason is None:
+            return False
+        self.stop_reason = reason
+        self.logger.info(f"Stopping early: {reason}")
+        self._set_hdf5_attrs(stop_reason=reason)
+        return True
+
+    def _set_hdf5_attrs(self, **attrs: Any) -> None:
+        """Set attributes of the .hdf5 file."""
+        hdf5_availability(self.hdf5_file)
+        with h5py.File(self.hdf5_file, 'r+', libver='latest') as f:
+            for k, v in attrs.items():
+                f.attrs[k] = v
 
     @overload
     def _parse_call(self, start: None = ..., key_new: None = ...) -> Key: ...
@@ -239,6 +296,12 @@ class ARMC(MonteCarloABC):
                                    'manual inspection of the cp2k output is recomended')
             elif not self.keep_files:
                 self.clear_jobs()
+
+            # The error of the initial parameters, the reference for the stop criteria
+            self._update_best_error(self[key_new], kappa=-1)
+            self._set_hdf5_attrs(initial_error=self._best_error)
+            if getattr(self.phi, 'auto', False):
+                self._set_auto_phi(self[key_new])
 
         elif key_new is None:
             raise TypeError("'key_new' cannot be None if 'start' is None")
@@ -273,6 +336,7 @@ class ARMC(MonteCarloABC):
         # Step 3: Evaluate the auxiliary error; accept if the new parameter set lowers the error
         error_change, aux_new, aux_validation = self._do_inner3(pes_new, pes_validation, key_old)
         accept = error_change < 0
+        self._update_best_error(aux_new, kappa)
 
         # Step 4: Update the auxiliary error history, apply phi & update job settings
         acceptance[omega] = accept
@@ -358,6 +422,20 @@ class ARMC(MonteCarloABC):
         """Apply :attr:`phi` to **value**."""
         return self.phi
 
+    def _set_auto_phi(self, aux_error: np.ndarray) -> None:
+        r"""Set :math:`\phi` from the error of the initial parameters, **aux_error**.
+
+        :math:`\phi` is added to every term of the error, so it is divided by the number of terms.
+
+        """
+        totals = self._error_totals(aux_error)
+        error = np.min(totals)
+        n_terms = aux_error.size // len(totals)
+        phi = self.AUTO_PHI_FRACTION * error / n_terms
+        self.logger.info(f"Setting phi to {phi:.6g}: {100 * self.AUTO_PHI_FRACTION:g}% of "
+                         f"the initial error ({error:.6g}) spread over its {n_terms} term(s)")
+        self.phi.phi = np.full_like(self.phi.phi, phi)
+
     def _get_first_key(self, idx: int = 0) -> Key:
         """Create a the ``history_dict`` variable and its first key.
 
@@ -426,22 +504,30 @@ class ARMC(MonteCarloABC):
         aux_error_mod[..., :-1] = _aux_error_mod
         aux_error_mod[..., -1] = phi
 
+        # The auxiliary errors are stored in the order of the PES descriptors,
+        # then the molecules (ARMC) or parameter sets (ARMC-PT)
         hdf5_kwarg = {
             'param': self.param.param.values.T,
             'xyz': mol_list,
             'phi': phi,
             'acceptance': accept,
-            'aux_error': aux_new,
+            'aux_error': np.asarray(aux_new).T,
             'aux_error_mod': aux_error_mod,
-            'validation/aux_error': aux_validation,
+            'validation/aux_error': np.asarray(aux_validation).T,
         }
         hdf5_kwarg.update(pes_new)
         for k, v in pes_validation.items():
             hdf5_kwarg[f'validation/{k}'] = v
 
-        # Store the state of the random number generator so a restart continues the same moves
-        rng_state = json.dumps(self.rng.bit_generator.state)
-        to_hdf5(self.hdf5_file, hdf5_kwarg, kappa, omega, attrs={'rng_state': rng_state})
+        # Store the state of the random number generator so a restart continues the same moves,
+        # and the settings that ARMC-PT swaps between parameter sets
+        attrs = {
+            'rng_state': json.dumps(self.rng.bit_generator.state),
+            'a_target': self.phi.a_target,
+            'gamma': self.phi.gamma,
+            'move_range': self.param.move_range,
+        }
+        to_hdf5(self.hdf5_file, hdf5_kwarg, kappa, omega, attrs=attrs)
 
     def get_aux_error(self, pes_dict: PesMapping, validation: bool = False) -> np.ndarray:
         r"""Return the auxiliary error :math:`\Delta \varepsilon_{QM-MM}`.
@@ -465,20 +551,26 @@ class ARMC(MonteCarloABC):
         Returns
         -------
         :class:`np.ndarray[np.float64] <numpy.ndarray>`, shape :math:`(m, n)`
-            An array with :math:`m*n` auxilary errors
+            An array with the auxilary errors of :math:`m` molecules (:class:`ARMC`) or
+            parameter sets (:class:`ARMCPT`) and :math:`n` PES descriptors.
 
         """
         # The PES descriptors are `functools.partial` objects with extra attributes
         pes_dict_ref: Mapping[str, Any] = self.pes if not validation else self.pes_validation
 
-        length = 1 + max((int(k.rsplit('.')[-1]) for k in pes_dict.keys()), default=0)
+        # The keys are of the form `f"{name}.{i}"`,
+        # `i` being the index of the molecule or parameter set
+        names: Dict[str, int] = {}
+        index: List[Tuple[int, int]] = []
+        for k in pes_dict.keys():
+            name, _, i_str = k.rpartition('.')
+            index.append((int(i_str), names.setdefault(name, len(names))))
 
-        generator = (
-            pes_dict_ref[k].err_func(pes_dict_ref[k].ref, v) * pes_dict_ref[k].weight
-            for k, v in pes_dict.items()
-        )
-        ret = np.fromiter(generator, dtype=float, count=len(pes_dict))
-        return ret.reshape(length, -1)
+        length = 1 + max((i for i, _ in index), default=0)
+        ret = np.full((length, len(names)), np.nan)
+        for (i, j), (k, v) in zip(index, pes_dict.items()):
+            ret[i, j] = pes_dict_ref[k].err_func(pes_dict_ref[k].ref, v) * pes_dict_ref[k].weight
+        return ret
 
     def restart(self) -> None:  # type: ignore[override]
         r"""Restart a previously started Addaptive Rate Monte Carlo procedure."""
@@ -504,11 +596,21 @@ class ARMC(MonteCarloABC):
             key = key_list[0]
             acceptance = acceptance[..., 0]
 
+        # A previous run may have stopped early; continue only if the stop criteria allow it
+        self._set_hdf5_attrs(stop_reason="")
+        self.stop_reason = None
+        if self._stop_after_iteration(i, j):
+            return
+
         # Finish the current set of sub-iterations
         j += 1
         for omega in range(j, self.sub_iter_len):
             key = self.do_inner(i, omega, acceptance, key)
+            if self._stop_after_iteration(i, omega):
+                return
         self._end_super_iter(acceptance)
+        if self._stop_after_super_iteration(i):
+            return
         i += 1
 
         # And continue
@@ -527,25 +629,41 @@ class ARMC(MonteCarloABC):
             # Set the (to-be incremented) auxiliary error for each parameter
             param = f['param'][:i+1]
             param = param.reshape((-1,) + param.shape[2:])
-            aux_error = f['aux_error'][:i+1]
-            aux_error = aux_error.reshape((-1,) + aux_error.shape[2:])
-            aux_error = np.swapaxes(aux_error, -2, -1)
+            aux_error = self._aux_error_from_hdf5(f['aux_error'][:i+1])
             for keys, err in zip(param[:ij], aux_error[:ij]):
-                for _k, _err in zip(keys, err):
-                    self[tuple(_k)] = _err
+                if self.HAS_LOOP:
+                    for _k, _err in zip(keys, err):
+                        self[tuple(_k)] = _err
+                else:
+                    # All parameter columns hold the same parameters (one per molecule)
+                    self[tuple(keys[0])] = err
 
             # Apply aforementioned increments
             aux_error_mod = f['aux_error_mod'][:i+1]
             aux_error_mod = aux_error_mod.reshape((-1,) + aux_error_mod.shape[2:])
             for _arr in aux_error_mod[:ij]:
-                for arr in _arr:
+                for arr in (_arr if self.HAS_LOOP else _arr[:1]):
                     *_k, err = arr
                     try:
                         self[tuple(_k)] += err
                     except KeyError:
                         pass
 
+            # Restore the lowest error found so far, for the stop criteria
+            totals = np.array([np.min(self._error_totals(err)) for err in aux_error[:ij]])
+            self._best_error = float(f.attrs.get('initial_error', np.inf))
+            self._best_kappa = -1
+            if len(totals) and np.min(totals) < self._best_error:
+                self._best_error = float(np.min(totals))
+                self._best_kappa = int(np.argmin(totals)) // f['param'].shape[1]
+
+            # Restore the settings that ARMC-PT swaps between parameter sets.
+            # Files written before Auto-FOX stored these keep the settings of the input.
             self.phi.phi = f['phi'][i]
+            if 'a_target' in f.attrs:
+                self.phi.a_target[:] = f.attrs['a_target']
+                self.phi.gamma[:] = f.attrs['gamma']
+                self.param.move_range[:] = f.attrs['move_range']
             acceptance = f['acceptance'][:i+1]
 
             # Continue with the random moves where the previous run stopped.
@@ -559,6 +677,17 @@ class ARMC(MonteCarloABC):
             self.param.param[:] = np.array(final_key, dtype=np.float64).T
             self.param.param_old[:] = self.param.param
         return i, j, final_key, acceptance[i]
+
+    def _aux_error_from_hdf5(self, aux_error: np.ndarray) -> np.ndarray:
+        """Convert the auxiliary errors of the .hdf5 file into the layout of :meth:`get_aux_error`.
+
+        The .hdf5 file stores them in the order of the PES descriptors, then the molecules
+        (:class:`ARMC`) or parameter sets (:class:`ARMCPT`).
+
+        """
+        n = len(self.phi) if self.HAS_LOOP else len(self.molecule)
+        aux_error = aux_error.reshape(-1, aux_error[0, 0].size // n, n)
+        return np.swapaxes(aux_error, -2, -1)
 
     @staticmethod
     def _find_restart_key(acceptance: np.ndarray, param: np.ndarray) -> List[Key]:

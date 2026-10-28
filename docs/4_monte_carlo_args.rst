@@ -723,6 +723,11 @@ Settings related to the Monte Carlo procedure itself.
             folder: MM_MD_workdir
             keep_files: False
             seed: 42
+            n_jobs: 4
+            stop:
+                target_error: 0.05
+                patience: 20
+                max_hours: 48
 
 |
 
@@ -814,6 +819,88 @@ Settings related to the Monte Carlo procedure itself.
         so a restarted run continues with the same moves as an uninterrupted one.
 
 
+    .. attribute:: monte_carlo.n_jobs
+
+        :Parameter:     * **Type** - :class:`int`
+                        * **Default Value** - ``1``
+
+        The number of MD jobs that may run at the same time.
+
+        An iteration runs one job per molecule (:class:`~FOX.armc.ARMC`) or
+        one job per parameter set (:class:`~FOX.armc.ARMCPT`).
+        With ``n_jobs > 1`` these jobs run side by side instead of one after the other,
+        each in its own directory (``md.0``, ``md.1``, ...).
+        The jobs of one molecule or parameter set (*e.g.* a geometry optimization
+        followed by an MD simulation) still run in order.
+
+        Every job uses as many cores as its own settings ask for,
+        so pick ``n_jobs`` such that ``n_jobs`` times the cores of a single job
+        does not exceed the cores of the machine.
+
+
+    .. attribute:: monte_carlo.stop
+
+        :Parameter:     * **Type** - :class:`dict`, optional
+                        * **Default Value** - ``{}``
+
+        Criteria for stopping the optimization before it runs out of iterations
+        (:attr:`monte_carlo.iter_len`).
+        All criteria are optional and the optimization stops as soon as any of them is met;
+        :attr:`monte_carlo.iter_len` remains the upper bound on the number of iterations.
+
+        The error used by these criteria is the total error of a parameter set:
+        the sum of its (weighted) errors over all PES descriptors and molecules,
+        without the :math:`\phi` penalty of :eq:`3`.
+        For :class:`~FOX.armc.ARMCPT` it is the lowest error among all parameter sets.
+        The error of the initial parameters is stored in
+        the ``"initial_error"`` attribute of the .hdf5 file, a convenient reference point.
+
+        The reason for stopping is logged and stored in the ``"stop_reason"`` attribute of
+        the .hdf5 file. A restart (:code:`init_armc armc.yaml --restart`) checks
+        the criteria of the new input again: with the same criteria the run stops right away,
+        with looser criteria (or none) it continues where it left off.
+
+        .. admonition:: See Also
+
+            :class:`FOX.armc.StopCriteria`
+                The criteria for stopping a Monte Carlo optimization before it runs out
+                of iterations.
+
+
+    .. attribute:: monte_carlo.stop.target_error
+
+        :Parameter:     * **Type** - :class:`float`, optional
+                        * **Default Value** - ``None``
+
+        Stop once the lowest error found so far is at or below this value.
+
+        The value is in the units of the error function (:attr:`pes.block.err_func`).
+        A fraction of the error of the initial parameters, which is logged at the start of
+        the run and stored in the ``"initial_error"`` attribute of the .hdf5 file,
+        is a natural choice.
+
+
+    .. attribute:: monte_carlo.stop.patience
+
+        :Parameter:     * **Type** - :class:`int`, optional
+                        * **Default Value** - ``None``
+
+        Stop after this many super-iterations (:attr:`monte_carlo.sub_iter_len`)
+        in a row without a new lowest error.
+
+
+    .. attribute:: monte_carlo.stop.max_hours
+
+        :Parameter:     * **Type** - :class:`float`, optional
+                        * **Default Value** - ``None``
+
+        Stop once the optimization has run for this many hours.
+
+        The check happens after every iteration, so the run can take up to
+        one iteration longer than this.
+        The clock starts anew when a calculation is restarted.
+
+
 .. _monte_carlo_parameters.phi:
 
 phi
@@ -875,7 +962,7 @@ Settings related to the ARMC :math:`\phi` parameter.
 
     .. attribute:: phi.phi
 
-        :Parameter:     * **Type** - :class:`float` or :class:`list[float] <list>`
+        :Parameter:     * **Type** - :class:`float`, :class:`list[float] <list>` or ``"auto"``
                         * **Default Value** - ``1.0``
 
         The initial value of the variable :attr:`phi<phi.phi>`.
@@ -883,6 +970,17 @@ Settings related to the ARMC :math:`\phi` parameter.
         See :eq:`3` and :eq:`4`.
         Note that a list must be supplied when running the ARMC parallel
         tempering procedure (:attr:`monte_carlo.type = FOX.armc.ARMCPT<monte_carlo.type>`)
+
+        :math:`\phi` is in the units of the error, so the default of ``1.0`` can be
+        far larger than the error itself, in which case nearly every move is accepted
+        until :math:`\phi` has been lowered over many super-iterations.
+        With ``"auto"`` the initial :math:`\phi` is set once the error of the
+        initial parameters is known: 1% of that error,
+        divided over the terms of the error (one per PES descriptor and molecule)
+        as :math:`\phi` is added to each term.
+        For :class:`~FOX.armc.ARMCPT` every parameter set starts with this same value,
+        while :attr:`phi.gamma` and :attr:`phi.a_target` still differ between them.
+        The value that was used is logged and stored in the .hdf5 file.
 
 
     .. attribute:: phi.func

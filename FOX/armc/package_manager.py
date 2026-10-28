@@ -313,6 +313,8 @@ class PackageManager(PackageManagerABC):
         ----------
         logger : :class:`logging.Logger`, optional
             A logger for reporting job statuses.
+        n_processes : :class:`int`
+            The number of jobs that are allowed to run at the same time.
 
         Returns
         -------
@@ -330,14 +332,23 @@ class PackageManager(PackageManagerABC):
             results = next(self.hook)
             return self._extract_mol(results, logger)
 
+        # PLAMS picks a job's folder from its name without any locking,
+        # so jobs running at the same time need names of their own
+        parallel = n_processes > 1 and len(next(iter(self.values()))) > 1
+
+        def job_name(name: str, i: int) -> str:
+            return f'{name}.{i}' if parallel else name
+
         jobs_iter = iter(self.items())
 
         name, jobs = next(jobs_iter)
-        promised_jobs: List[PromisedObject] = [self.assemble_job(j, name=name) for j in jobs]
+        promised_jobs: List[PromisedObject] = [
+            self.assemble_job(j, name=job_name(name, i)) for i, j in enumerate(jobs)
+        ]
 
         for name, jobs in jobs_iter:
-            promised_jobs = [self.assemble_job(j, p_j, name=name) for
-                             j, p_j in zip(jobs, promised_jobs)]
+            promised_jobs = [self.assemble_job(j, p_j, name=job_name(name, i)) for
+                             i, (j, p_j) in enumerate(zip(jobs, promised_jobs))]
 
         results = run_parallel(gather(*promised_jobs), n_threads=n_processes)
         return self._extract_mol(results, logger)

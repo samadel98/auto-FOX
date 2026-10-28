@@ -92,6 +92,10 @@ The algorithm
     \quad
     \kappa = 1, 2, 3, ..., N
 
+6.  Steps 1 to 5 are repeated for a fixed number of iterations
+    (:attr:`monte_carlo.iter_len`) or until one of the optional stop criteria
+    (:attr:`monte_carlo.stop`) is met, see `Stopping early and parallel jobs`_.
+
 
 Parameters
 ----------
@@ -422,6 +426,44 @@ State-averaged ARMC
                 - atom_subset: [Cd, Se, S, O]
 
     ...
+
+
+Stopping early and parallel jobs
+--------------------------------
+.. code:: yaml
+
+    ...
+
+    monte_carlo:
+        iter_len: 50000
+        n_jobs: 4
+        stop:
+            target_error: 0.05
+            patience: 20
+            max_hours: 48
+
+    phi:
+        phi: auto
+
+    ...
+
+By default an ARMC run does all :attr:`monte_carlo.iter_len` iterations.
+The criteria in :attr:`monte_carlo.stop` end it earlier:
+once the lowest error reaches :attr:`~monte_carlo.stop.target_error`,
+once the lowest error has not improved for :attr:`~monte_carlo.stop.patience`
+super-iterations in a row, or once the run has taken :attr:`~monte_carlo.stop.max_hours`.
+The reason is logged and stored in the ``"stop_reason"`` attribute of the .hdf5 file,
+next to the error of the initial parameters (``"initial_error"``).
+A stopped run can be continued with :code:`init_armc armc.yaml --restart`
+after loosening or removing the criteria.
+
+With :attr:`monte_carlo.n_jobs` the MD jobs of one iteration
+(one per molecule in state-averaged ARMC, one per parameter set in ARMC-PT)
+run side by side rather than one after the other.
+
+Finally, :attr:`phi.phi = "auto" <phi.phi>` scales the initial :math:`\phi` to
+the error of the initial parameters, rather than using a fixed value of ``1.0``
+that may be orders of magnitude larger than the error itself.
 
 
 .. _1: https://dx.doi.org/10.1021/acs.jctc.6b01089

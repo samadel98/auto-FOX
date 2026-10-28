@@ -23,7 +23,6 @@ import numpy as np
 
 from .armc import ARMC
 from ..type_hints import ArrayOrScalar
-from ..io.hdf5_utils import create_xyz_hdf5
 
 if TYPE_CHECKING:
     from ..classes import MultiMolecule
@@ -81,10 +80,9 @@ def swap_random(acceptance: np.ndarray, armcpt: "ARMCPT",
     """
     self = armcpt
     if weighted:
-        _p = acceptance.mean(axis=0) - self.phi.a_target
+        _p = np.abs(acceptance.mean(axis=0) - self.phi.a_target)
         if 0 in _p:
-            p = np.zeros_like(_p)
-            p[_p == 0] = True
+            p = (_p == 0).astype(np.float64)
         else:
             p = _p**-1
     else:
@@ -158,16 +156,11 @@ class ARMCPT(ARMC):
         """Initialize the Addaptive Rate Monte Carlo procedure."""
         key_new = self._parse_call(start, key_new)
         start_ = start if start is not None else 0
+        self._main_loop(start_, key_new)
 
-        # Start the main loop
-        for kappa in range(start_, self.super_iter_len):
-            acceptance = self.acceptance()
-            create_xyz_hdf5(self.hdf5_file, self.molecule,
-                            iter_len=self.sub_iter_len, phi=self.phi.phi)
-
-            for omega in range(self.sub_iter_len):
-                key_new = self.do_inner(kappa, omega, acceptance, key_new)
-            self._end_super_iter(acceptance)
+    def _error_totals(self, aux_error: np.ndarray) -> np.ndarray:
+        """Return the total error of each parameter set in **aux_error**."""
+        return np.atleast_1d(np.sum(aux_error, axis=-1))
 
     def _end_super_iter(self, acceptance: np.ndarray) -> None:
         r"""Update :math:`\phi` and swap parameter sets at the end of a super-iteration."""
@@ -206,6 +199,7 @@ class ARMCPT(ARMC):
         # Step 3: Evaluate the auxiliary error; accept if the new parameter set lowers the error
         error_change, aux_new, aux_validation = self._do_inner3(pes_new, pes_validation, key_old)
         accept: np.ndarray = error_change < 0
+        self._update_best_error(aux_new, kappa)
 
         # Step 4: Update the auxiliary error history, apply phi & update job settings
         acceptance[omega] = accept
@@ -213,7 +207,7 @@ class ARMCPT(ARMC):
                                   _key_new, key_old, kappa, omega)
 
         # Step 5: Export the results to HDF5
-        self._do_inner5(mol_list, accept, aux_new.T, aux_validation.T,
+        self._do_inner5(mol_list, accept, aux_new, aux_validation,
                         pes_new, pes_validation, kappa, omega)
         return key_new
 
