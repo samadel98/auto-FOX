@@ -53,6 +53,13 @@ Unreleased
 * Fix the error labels in the ARMC .hdf5 file not matching the errors when there is more than
   one PES descriptor.
 * Fix ``FOX.armc.armc_pt.swap_random(..., weighted=True)`` raising an error.
+* Add ``FOX.armc.CMAES`` (``monte_carlo.type: FOX.armc.CMAES``), which optimizes the
+  parameters with the CMA-ES instead of ARMC moves, keeping the net charge and the charge
+  constraints exactly. New options: ``monte_carlo.popsize`` and ``monte_carlo.sigma``.
+  Requires the ``cma`` package (>= 4.0.0), now a dependency.
+* Fix ``FOX.recipes.get_best`` and ``overlay_descriptor`` mixing up the parameter sets of
+  ARMC-PT .hdf5 files: ``i`` now selects the parameter set, and ``armc_report`` reports
+  the best parameter set of the best iteration.
 
 
 1.0.0

@@ -649,13 +649,7 @@ class ARMC(MonteCarloABC):
                     except KeyError:
                         pass
 
-            # Restore the lowest error found so far, for the stop criteria
-            totals = np.array([np.min(self._error_totals(err)) for err in aux_error[:ij]])
-            self._best_error = float(f.attrs.get('initial_error', np.inf))
-            self._best_kappa = -1
-            if len(totals) and np.min(totals) < self._best_error:
-                self._best_error = float(np.min(totals))
-                self._best_kappa = int(np.argmin(totals)) // f['param'].shape[1]
+            self._restore_best_error(f, aux_error[:ij])
 
             # Restore the settings that ARMC-PT swaps between parameter sets.
             # Files written before Auto-FOX stored these keep the settings of the input.
@@ -677,6 +671,19 @@ class ARMC(MonteCarloABC):
             self.param.param[:] = np.array(final_key, dtype=np.float64).T
             self.param.param_old[:] = self.param.param
         return i, j, final_key, acceptance[i]
+
+    def _restore_best_error(self, f: h5py.File, aux_error: np.ndarray) -> None:
+        """Restore the lowest error found so far, for the stop criteria.
+
+        **aux_error** holds the errors of all finished iterations.
+
+        """
+        totals = np.array([np.min(self._error_totals(err)) for err in aux_error])
+        self._best_error = float(f.attrs.get('initial_error', np.inf))
+        self._best_kappa = -1
+        if len(totals) and np.min(totals) < self._best_error:
+            self._best_error = float(np.min(totals))
+            self._best_kappa = int(np.argmin(totals)) // f['param'].shape[1]
 
     def _aux_error_from_hdf5(self, aux_error: np.ndarray) -> np.ndarray:
         """Convert the auxiliary errors of the .hdf5 file into the layout of :meth:`get_aux_error`.

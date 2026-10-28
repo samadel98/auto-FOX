@@ -525,7 +525,8 @@ def from_hdf5(filename, datasets=None):  # noqa: E302
         The path+name of the hdf5 file.
     datasets : list [str]
         A list of to be retrieved dataset names.
-        All datasets will be retrieved if ``None``.
+        All datasets will be retrieved if ``None``,
+        except for the internal state of :class:`~FOX.armc.CMAES` (``"cmaes_*"``).
 
     Returns
     -------
@@ -542,7 +543,7 @@ def from_hdf5(filename, datasets=None):  # noqa: E302
                 as_dict = False
                 datasets_: Iterable[str] = (f[datasets].name,)
             elif datasets is None:
-                datasets_ = recursive_keys(f)
+                datasets_ = [k for k in recursive_keys(f) if not k.startswith('/cmaes_')]
             else:
                 datasets_ = [f[k].name for k in datasets]  # type: ignore
         except KeyError as ex:

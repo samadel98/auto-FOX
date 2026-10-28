@@ -106,12 +106,13 @@ def test_main_armc_report(
     param = pd.read_csv(tmp_path / "report" / "best_param.csv", index_col=[0, 1, 2]).squeeze()
     param_ref = get_best(filename, "param")
     np.testing.assert_allclose(param.values, param_ref.values)
+    if ref_dir == ARMCPT_REF:
+        # The best of the 3 parameter sets
+        assertion.contains(out, "(super-iteration 9, sub-iteration 2, parameter set 0)")
     if PLT_ERROR is None:
-        names = ["aux_error.png", "rdf.0.png"]
-        if ref_dir == ARMCPT_REF:
-            names += ["rdf.1.png", "rdf.2.png"]
-        for name in names:
-            assert (tmp_path / "report" / name).is_file(), name
+        # Only the PES descriptors of the best parameter set are plotted
+        names = ["aux_error.png", "best_param.csv", "rdf.0.png"]
+        assertion.eq(sorted(os.listdir(tmp_path / "report")), names)
 
     # Only the .csv file with `--no-plots`
     output = tmp_path / "out"

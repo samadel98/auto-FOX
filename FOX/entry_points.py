@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Optional
 
 import h5py
+import numpy as np
 import yaml
 import pandas as pd
 
@@ -127,6 +128,9 @@ def main_armc_report(args: Optional[list] = None) -> None:
     plots the error per iteration and every PES descriptor of the best iteration
     against its reference.
 
+    With more than one parameter set per iteration (ARMC-PT and CMA-ES)
+    the best parameter set of the best iteration is reported.
+
     """
     parser = argparse.ArgumentParser(
         prog='FOX',
@@ -165,20 +169,32 @@ def main_armc_report(args: Optional[list] = None) -> None:
 
     from .io import from_hdf5
     from .recipes import get_best
+    from .recipes.param import _get_n_sets
 
     with h5py.File(filename, 'r') as f:
         super_iter_len, sub_iter_len = f['aux_error'].shape[:2]
         kappa = int(f.attrs['super-iteration'])
         omega = int(f.attrs['sub-iteration'])
         seed = f.attrs.get('seed')
+        n_sets = _get_n_sets(f)
         pes_names = sorted(k[:-len('.ref')] for k in f.keys() if k.endswith('.ref'))
     if kappa < 0:
         raise ValueError(f"{str(filename)!r} does not contain any finished ARMC iterations")
 
     aux_error: pd.DataFrame = from_hdf5(filename, err_dset)
     acceptance: pd.DataFrame = from_hdf5(filename, 'acceptance')
-    j = int(aux_error.sum(axis=1, skipna=False).idxmin())
-    param: pd.Series = get_best(filename, 'param', err_dset=err_dset)
+    if n_sets > 1:
+        # The total error of every parameter set, the PES descriptors being `f"{name}.{i}"`
+        error = aux_error.T.groupby(lambda k: int(k.rpartition('.')[2])).sum(min_count=1).T
+        j_best, i_best = np.unravel_index(int(np.nanargmin(error.values)), error.shape)
+        j, i_set = int(j_best), int(i_best)
+        lowest = error.iat[j, i_set]
+        pes_names = [k for k in pes_names if k.rpartition('.')[2] == str(i_set)]
+    else:
+        error = aux_error.sum(axis=1, skipna=False).to_frame('error')
+        j, i_set = int(error['error'].idxmin()), 0
+        lowest = error.iat[j, 0]
+    param: pd.Series = get_best(filename, 'param', i=i_set, err_dset=err_dset)
 
     print(f"ARMC results: {filename}")
     n_done = 1 + omega + kappa * sub_iter_len
@@ -187,9 +203,11 @@ def main_armc_report(args: Optional[list] = None) -> None:
         print(f"Seed: {seed}")
     print(f"Acceptance rate: {100 * acceptance.values.mean():.1f}%")
     best_kappa, best_omega = divmod(j, sub_iter_len)
+    location = f"super-iteration {best_kappa}, sub-iteration {best_omega}"
+    if n_sets > 1:
+        location += f", parameter set {i_set}"
     print(f"Lowest {'validation ' if args_parsed.validation else ''}error: "
-          f"{aux_error.loc[j].sum():.6g} "
-          f"(super-iteration {best_kappa}, sub-iteration {best_omega})")
+          f"{lowest:.6g} ({location})")
     print("\nBest parameters:")
     print(param.to_string())
 
@@ -197,7 +215,9 @@ def main_armc_report(args: Optional[list] = None) -> None:
     written = [output / 'best_param.csv']
     param.to_csv(written[0])
     if not args_parsed.no_plots:
-        written += _plot_armc_report(filename, output, aux_error, pes_names, err_dset)
+        # With more than one parameter set: the lowest error of every iteration
+        plot_error = aux_error if n_sets == 1 else error.min(axis=1).to_frame('lowest error')
+        written += _plot_armc_report(filename, output, plot_error, pes_names, err_dset)
     print("\nWritten: " + ", ".join(str(i) for i in written))
 
 

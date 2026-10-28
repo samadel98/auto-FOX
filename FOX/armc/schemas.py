@@ -295,6 +295,20 @@ mc_schema = Schema({
         And(abc.Mapping, Use(lambda n: stop_schema.validate(dict(n)))),
         error=Formatter(f"'monte_carlo.stop' expected None or a Mapping{EPILOG}")
     ),
+
+    # Only used by `FOX.armc.CMAES`
+    Optional_('popsize', default=None): Or(
+        None,
+        And(_not_bool, supports_int, lambda n: int(n) > 1, Use(int)),
+        error=Formatter(f"'monte_carlo.popsize' expected None or "
+                        f"an integer larger than 1{EPILOG}")
+    ),
+
+    Optional_('sigma', default=None): Or(
+        None,
+        And(_not_bool, supports_float, lambda n: 0 < float(n) < np.inf, Use(float)),
+        error=Formatter(f"'monte_carlo.sigma' expected None or a positive float{EPILOG}")
+    ),
 }, name='mc_schema', description='Schema for validating the "monte_carlo" block.')
 
 
@@ -328,6 +342,8 @@ class MCMapping(TypedDict, total=False):
     seed: Union[None, str, bytes, SupportsInt]
     n_jobs: Union[None, str, bytes, SupportsInt]
     stop: Optional[StopMapping]
+    popsize: Union[None, str, bytes, SupportsInt]
+    sigma: Union[None, str, SupportsFloat]
 
 
 class MCDict(TypedDict):
@@ -344,6 +360,8 @@ class MCDict(TypedDict):
     seed: Optional[int]
     n_jobs: int
     stop: StopDict
+    popsize: Optional[int]
+    sigma: Optional[float]
 
 
 #: Schema for validating the ``"psf"`` block.
