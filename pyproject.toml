@@ -59,6 +59,7 @@ dependencies = [
     "qmflows>=0.12.0",
     "plams>=1.5.1,<2024",  # PLAMS 2024 breaks the psf recipes; 2025 removed `ADFJob` (used by QMFlows)
     "packaging>=17.1",
+    "cma>=4.0.0",  # cma < 4 does not support NumPy 2
 ]
 
 [project.scripts]
@@ -131,6 +132,7 @@ module = [
     "h5py.*",
     "dask.*",
     "ase.*",
+    "cma.*",
 ]
 ignore_missing_imports = true
 

@@ -34,6 +34,7 @@ import pandas as pd
 from scm.plams import Molecule
 
 from .._nanoutils import split_dict
+from .cmaes import CMAES
 from .guess import guess_param
 from .mc_post_process import AtomsFromPSF
 from .schemas import (
@@ -429,6 +430,14 @@ def get_armc(dct: MCMapping,
         mc_dict['hdf5_file'] = os.path.abspath(hdf5)
 
     mc_type = mc_dict.pop('type')  # type: ignore
+
+    # Options of the CMA-ES; passed on only if set
+    for k in ('popsize', 'sigma'):
+        if mc_dict[k] is None:  # type: ignore[literal-required]
+            del mc_dict[k]  # type: ignore[misc]
+        elif not issubclass(mc_type, CMAES):
+            raise ValueError(f"'monte_carlo.{k}' is only used by 'FOX.armc.CMAES'; "
+                             f"observed 'monte_carlo.type': {mc_type.__name__!r}")
     return mc_type(phi=phi, param=param, package_manager=package_manager,
                    molecule=mol, **mc_dict), cast(RunDict, kwargs)
 

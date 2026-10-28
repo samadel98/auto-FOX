@@ -146,6 +146,39 @@ __all__ = ['get_best', 'overlay_descriptor', 'plot_descriptor']
 PlotAccessor: type = pd.DataFrame.plot  # A class used by Pandas for plotting stuff
 
 
+def _get_n_sets(f: h5py.File) -> int:
+    """Return the number of parameter sets per iteration in an ARMC .hdf5 file.
+
+    This is 1 for :class:`~FOX.armc.ARMC`, the number of parameter sets for
+    :class:`~FOX.armc.ARMCPT` and the number of candidates for :class:`~FOX.armc.CMAES`.
+
+    """
+    shape = f['acceptance'].shape
+    return shape[2] if len(shape) == 3 else 1
+
+
+def _best_iteration(
+    aux_error: pd.DataFrame,
+    n_sets: int,
+    i: int,
+    sum_error: None | str | List[str] = None,
+) -> int:
+    """Return the iteration with the lowest error.
+
+    With more than one parameter set per iteration,
+    only the errors of parameter set **i** are considered.
+
+    """
+    if sum_error is not None:
+        err = aux_error[sum_error]
+    elif n_sets > 1:
+        columns = [k for k in aux_error.columns if k.rpartition('.')[2] == str(i)]
+        err = aux_error[columns]
+    else:
+        err = aux_error
+    return int(err.sum(axis=1, skipna=False).idxmin())
+
+
 def get_best(
     hdf5_file: str | PathLike[str],
     name: str,
@@ -165,7 +198,10 @@ def get_best(
         ``"param"`` or ``"aux_error"``.
     i : :class:`int`
         The index of the desired PES.
-        Only relevant for PES-descriptors of state-averaged ARMCs.
+        Only relevant for PES-descriptors of state-averaged ARMCs,
+        and for runs with more than one parameter set per iteration
+        (:class:`~FOX.armc.ARMCPT` and :class:`~FOX.armc.CMAES`),
+        in which case it is the index of the parameter set.
     sum_error : :class:`str` or :class:`list[str] <list>`, optional
         Sum all the given aux errors for a given iteration when determining an optimum.
         If :data:`None`, sum over all aux errors.
@@ -185,6 +221,7 @@ def get_best(
         if full_name not in f.keys():  # i.e. if **name** does not belong to a PE descriptor
             full_name = name
         shape = f[err_dset].shape[:2]
+        n_sets = _get_n_sets(f)
 
     # Load the DataFrames
     if full_name in err_dset:
@@ -194,13 +231,18 @@ def get_best(
         aux_error, prop = hdf5_dict[err_dset], hdf5_dict[full_name]
 
     # Return the best DataFrame (or Series)
-    if sum_error is None:
-        j: int = aux_error.sum(axis=1, skipna=False).idxmin()
-    else:
-        j = aux_error[sum_error].sum(axis=1, skipna=False).idxmin()
+    j = _best_iteration(aux_error, n_sets, i, sum_error)
     logger.debug(f"Optimum ARMC cycle: {np.unravel_index(j, shape)}")
 
-    df = prop[j] if not isinstance(prop, NDFrame) else prop.iloc[j]
+    if not isinstance(prop, NDFrame):
+        df = prop[j]
+        if n_sets > 1 and full_name == 'param':
+            df = df[i]  # One column per parameter set
+    elif n_sets > 1 and len(prop) == n_sets * len(aux_error):
+        # One row per parameter set (older .hdf5 files)
+        df = prop.iloc[j * n_sets + i]
+    else:
+        df = prop.iloc[j]
     if isinstance(df, pd.DataFrame):
         df.columns.name = full_name
     elif isinstance(df, pd.Series):
@@ -220,7 +262,10 @@ def overlay_descriptor(hdf5_file: Union[str, 'PathLike[str]'], name: str = 'rdf'
         The name of the PES descriptor, *e.g.* ``"rdf"``.
     i : :class:`int`
         The index of desired PES.
-        Only relevant for state-averaged ARMCs.
+        Only relevant for state-averaged ARMCs,
+        and for runs with more than one parameter set per iteration
+        (:class:`~FOX.armc.ARMCPT` and :class:`~FOX.armc.CMAES`),
+        in which case it is the index of the parameter set.
     err_dset : :class:`str`
         The name of the dataset containing the errors.
         Generally speaking one should pick either ``"aux_error"`` or ``"validation/aux_error"``.
@@ -235,13 +280,14 @@ def overlay_descriptor(hdf5_file: Union[str, 'PathLike[str]'], name: str = 'rdf'
     """  # noqa
     with h5py.File(hdf5_file, 'r', libver='latest') as f:
         shape = f[err_dset].shape[:2]
+        n_sets = _get_n_sets(f)
 
     mm_name = f'{name}.{i}'
     qm_name = f'{name}.{i}.ref'
     hdf5_dict = from_hdf5(hdf5_file, [err_dset, mm_name, qm_name])
     aux_error, mm, qm = hdf5_dict[err_dset], hdf5_dict[mm_name], hdf5_dict[qm_name]
 
-    j: int = aux_error.sum(axis=1, skipna=False).idxmin()
+    j = _best_iteration(aux_error, n_sets, i)
     logger.debug(f"Optimum ARMC cycle: {np.unravel_index(j, shape)}")
     mm = mm[j]
 

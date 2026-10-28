@@ -466,9 +466,63 @@ the error of the initial parameters, rather than using a fixed value of ``1.0``
 that may be orders of magnitude larger than the error itself.
 
 
+.. _CMA-ES optimization:
+
+CMA-ES optimization
+-------------------
+.. code:: yaml
+
+    ...
+
+    monte_carlo:
+        type: FOX.armc.CMAES
+        iter_len: 2000
+        sub_iter_len: 10
+        n_jobs: 4
+        popsize: 12
+        sigma: 0.1
+        stop:
+            target_error: 0.05
+            patience: 20
+
+    ...
+
+:attr:`monte_carlo.type = FOX.armc.CMAES <monte_carlo.type>` replaces the ARMC moves by
+the covariance matrix adaptation evolution strategy (CMA-ES),
+as implemented by the cma_ package.
+Rather than moving one parameter at a time, every iteration (a *generation*) draws
+:attr:`~monte_carlo.popsize` candidate parameter sets from a multivariate normal
+distribution, runs their MD jobs (side by side with :attr:`monte_carlo.n_jobs`)
+and moves the distribution towards the best candidates.
+Along the way the CMA-ES learns the step size and the correlations between
+the parameters, *e.g.* that the :math:`\sigma` and :math:`\varepsilon` of
+a Lennard-Jones pair are best changed together.
+
+All other input (:ref:`param <monte_carlo_parameters.param>`, :ref:`pes <monte_carlo_parameters.pes>`,
+:ref:`job <monte_carlo_parameters.job>`, ...) is the same as for ARMC,
+as are the .hdf5 file, :code:`init_armc armc.yaml --restart` and :code:`armc_report`.
+Some differences:
+
+* :attr:`monte_carlo.sigma` sets the initial step size as a fraction of the initial
+  parameter values; :ref:`phi <monte_carlo_parameters.phi>` is not used.
+* The net charge and the charge constraints (*e.g.* ``Cd == -2 * $LIGAND``)
+  hold exactly for every candidate:
+  the CMA-ES only varies the charges in ways that keep them,
+  rather than rebalancing the charges afterwards.
+* The first candidate holds the initial parameters,
+  so their error is stored (``"initial_error"``) without an extra MD job.
+* Besides the criteria of :attr:`monte_carlo.stop`, the run stops
+  once the CMA-ES itself has converged (*e.g.* when its step size has become negligible).
+* A single molecule is supported; state-averaged fits require :class:`~FOX.armc.ARMC`.
+* The .hdf5 file has one parameter set per candidate, like ARMC-PT:
+  ``"acceptance"`` marks the candidates that were used to update the distribution
+  and ``"phi"`` holds the step size.
+
+
 .. _1: https://dx.doi.org/10.1021/acs.jctc.6b01089
 .. _2: https://doi.org/10.1021/ja00051a040
 .. _YAML: https://yaml.org/
+.. _cma: https://github.com/CMA-ES/pycma
 .. _HDF5: https://www.h5py.org/
 .. _Job: https://www.scm.com/doc/plams/components/jobs.html#scm.plams.core.basejob.Job
 .. _CP2K: https://manual.cp2k.org/trunk/CP2K_INPUT/FORCE_EVAL/MM/FORCEFIELD.html

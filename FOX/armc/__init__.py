@@ -3,6 +3,7 @@
 from .monte_carlo import MonteCarloABC
 from .armc import ARMC
 from .armc_pt import ARMCPT
+from .cmaes import CMAES
 from .stop_criteria import StopCriteria
 from .guess import guess_param
 from .run_armc import run_armc
@@ -22,7 +23,7 @@ from .err_funcs import (
 )
 
 __all__ = [
-    'MonteCarloABC', 'ARMC', 'ARMCPT', 'StopCriteria',
+    'MonteCarloABC', 'ARMC', 'ARMCPT', 'CMAES', 'StopCriteria',
     'guess_param',
     'dict_to_armc',
     'run_armc',

@@ -96,6 +96,10 @@ Index
     :attr:`monte_carlo.folder`                  The name of the ARMC working directory.
     :attr:`monte_carlo.keep_files`              Whether to keep *all* raw output files or not.
     :attr:`monte_carlo.seed`                    The seed of the random number generator used for the moves.
+    :attr:`monte_carlo.n_jobs`                  The number of MD jobs that may run at the same time.
+    :attr:`monte_carlo.stop`                    Criteria for stopping the optimization before it runs out of iterations.
+    :attr:`monte_carlo.popsize`                 The number of candidates per generation of the CMA-ES.
+    :attr:`monte_carlo.sigma`                   The initial step size of the CMA-ES.
     =========================================== ===================================================================================================================
 
 .. table::
@@ -746,6 +750,10 @@ Settings related to the Monte Carlo procedure itself.
             :class:`FOX.armc.ARMCPT`
                 An :class:`~FOX.armc.ARMC` subclass implementing a parallel tempering procedure.
 
+            :class:`FOX.armc.CMAES`
+                The covariance matrix adaptation evolution strategy (CMA-ES),
+                see :ref:`CMA-ES optimization`.
+
 
     .. attribute:: monte_carlo.iter_len
 
@@ -833,6 +841,9 @@ Settings related to the Monte Carlo procedure itself.
         The jobs of one molecule or parameter set (*e.g.* a geometry optimization
         followed by an MD simulation) still run in order.
 
+        For :class:`~FOX.armc.CMAES` an iteration runs one job per candidate
+        (:attr:`monte_carlo.popsize`).
+
         Every job uses as many cores as its own settings ask for,
         so pick ``n_jobs`` such that ``n_jobs`` times the cores of a single job
         does not exceed the cores of the machine.
@@ -851,7 +862,8 @@ Settings related to the Monte Carlo procedure itself.
         The error used by these criteria is the total error of a parameter set:
         the sum of its (weighted) errors over all PES descriptors and molecules,
         without the :math:`\phi` penalty of :eq:`3`.
-        For :class:`~FOX.armc.ARMCPT` it is the lowest error among all parameter sets.
+        For :class:`~FOX.armc.ARMCPT` it is the lowest error among all parameter sets
+        and for :class:`~FOX.armc.CMAES` the lowest error among all candidates.
         The error of the initial parameters is stored in
         the ``"initial_error"`` attribute of the .hdf5 file, a convenient reference point.
 
@@ -899,6 +911,37 @@ Settings related to the Monte Carlo procedure itself.
         The check happens after every iteration, so the run can take up to
         one iteration longer than this.
         The clock starts anew when a calculation is restarted.
+
+
+    .. attribute:: monte_carlo.popsize
+
+        :Parameter:     * **Type** - :class:`int`, optional
+                        * **Default Value** - ``None``
+
+        The number of candidates per generation (*i.e.* per iteration) of the CMA-ES,
+        :math:`\lambda`.
+        Only used by :attr:`monte_carlo.type = FOX.armc.CMAES<monte_carlo.type>`.
+
+        If ``None``, :math:`4 + \lfloor 3 \ln n \rfloor` is used,
+        :math:`n` being the number of parameters that the CMA-ES varies:
+        the variable parameters, minus one for the net charge and
+        one for every charge constraint.
+        A larger population searches more broadly, at the cost of more MD jobs per generation;
+        a multiple of :attr:`monte_carlo.n_jobs` makes the best use of the parallel jobs.
+
+
+    .. attribute:: monte_carlo.sigma
+
+        :Parameter:     * **Type** - :class:`float`
+                        * **Default Value** - ``0.1``
+
+        The initial step size of the CMA-ES, as a fraction of the initial parameter values.
+        Only used by :attr:`monte_carlo.type = FOX.armc.CMAES<monte_carlo.type>`.
+
+        The default of ``0.1`` draws the first candidates with parameters
+        that typically differ by about 10% from their initial values.
+        The CMA-ES adapts the step size (and the shape of the search distribution) itself;
+        the current step size is stored in the ``"phi"`` dataset of the .hdf5 file.
 
 
 .. _monte_carlo_parameters.phi:

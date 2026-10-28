@@ -8,5 +8,6 @@ noodles==0.3.3
 h5py==3.6.0
 plams==1.5.1
 packaging==17.1
+cma==4.0.0
 pytest==6.2.5
 pytest-cov
