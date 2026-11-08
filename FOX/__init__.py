@@ -2,7 +2,7 @@
 
 Documentation
 -------------
-https://auto-fox.readthedocs.io/en/latest/
+https://samadel98.github.io/auto-FOX/
 
 """  # noqa: E501
 

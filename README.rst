@@ -1,8 +1,8 @@
 
 .. image:: https://github.com/samadel98/auto-FOX/actions/workflows/pythonpackage.yml/badge.svg?branch=master
     :target: https://github.com/samadel98/auto-FOX/actions/workflows/pythonpackage.yml?query=branch%3Amaster
-.. image:: https://readthedocs.org/projects/auto-fox/badge/?version=latest
-    :target: https://auto-fox.readthedocs.io/en/latest/
+.. image:: https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg
+    :target: https://samadel98.github.io/auto-FOX/
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3988142.svg
     :target: https://doi.org/10.5281/zenodo.3988142
 .. image:: https://badge.fury.io/py/Auto-FOX.svg
@@ -132,21 +132,21 @@ Optional dependencies
 
   - PyPi:       ``pip install rdkit``
 
-.. _1: https://auto-fox.readthedocs.io/en/latest/3_multimolecule.html
-.. _2: https://auto-fox.readthedocs.io/en/latest/5_xyz_reader.html
-.. _3: https://auto-fox.readthedocs.io/en/latest/1_rdf.html
-.. _4: https://auto-fox.readthedocs.io/en/latest/2_rmsd.html#root-mean-squared-displacement
-.. _5: https://auto-fox.readthedocs.io/en/latest/2_rmsd.html#root-mean-squared-fluctuation
-.. _6: https://auto-fox.readthedocs.io/en/latest/2_rmsd.html#discerning-shell-structures
-.. _7: https://auto-fox.readthedocs.io/en/latest/4_monte_carlo.html
-.. _psf: https://auto-fox.readthedocs.io/en/latest/8_psf.html
-.. _prm: https://auto-fox.readthedocs.io/en/latest/9_prm.html
-.. _rtf: https://auto-fox.readthedocs.io/en/latest/11_rtf.html
-.. _top: https://auto-fox.readthedocs.io/en/latest/12_top.html
-.. _lj: https://auto-fox.readthedocs.io/en/latest/6_estimate_lj.html
-.. _properties: https://auto-fox.readthedocs.io/en/latest/10_properties.html
+.. _1: https://samadel98.github.io/auto-FOX/3_multimolecule.html
+.. _2: https://samadel98.github.io/auto-FOX/5_xyz_reader.html
+.. _3: https://samadel98.github.io/auto-FOX/1_rdf.html
+.. _4: https://samadel98.github.io/auto-FOX/2_rmsd.html#root-mean-squared-displacement
+.. _5: https://samadel98.github.io/auto-FOX/2_rmsd.html#root-mean-squared-fluctuation
+.. _6: https://samadel98.github.io/auto-FOX/2_rmsd.html#discerning-shell-structures
+.. _7: https://samadel98.github.io/auto-FOX/4_monte_carlo.html
+.. _psf: https://samadel98.github.io/auto-FOX/8_psf.html
+.. _prm: https://samadel98.github.io/auto-FOX/9_prm.html
+.. _rtf: https://samadel98.github.io/auto-FOX/11_rtf.html
+.. _top: https://samadel98.github.io/auto-FOX/12_top.html
+.. _lj: https://samadel98.github.io/auto-FOX/6_estimate_lj.html
+.. _properties: https://samadel98.github.io/auto-FOX/10_properties.html
 .. _8: https://www.youtube.com/watch?v=hFDcoX7s6rE
-.. _documentation: https://auto-fox.readthedocs.io/en/latest/
+.. _documentation: https://samadel98.github.io/auto-FOX/
 .. _Miniconda: http://conda.pydata.org/miniconda.html
 .. _Anaconda: https://www.anaconda.com/distribution/#download-section
 .. _Matplotlib: https://matplotlib.org/

@@ -118,6 +118,9 @@ html_theme = 'sphinx_rtd_theme'
 #
 html_theme_options = {'includehidden': False}
 
+# The address of the documentation on GitHub Pages (used for the canonical links)
+html_baseurl = 'https://samadel98.github.io/auto-FOX/'
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".

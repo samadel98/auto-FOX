@@ -79,6 +79,9 @@ Unreleased
 * ``import FOX`` no longer hides pandas ``PerformanceWarning`` for the whole program,
   only for Auto-FOX's own code.
 * CI: show the test coverage in the job summary instead of uploading it to Codecov.
+* Publish the documentation on GitHub Pages, https://samadel98.github.io/auto-FOX/, and
+  point the links in the README, the package metadata and ``init_armc --help`` there.
+  They pointed to the Read the Docs site of the original repository.
 
 
 1.0.0
