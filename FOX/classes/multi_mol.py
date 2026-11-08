@@ -1803,17 +1803,33 @@ class MultiMolecule(_MultiMolecule):
         periodic: None | Sequence[Literal["x", "y", "z"]] | Sequence[Literal[0, 1, 2]] = None,
         atom_pairs: None | Iterable[tuple[str, str]] = None,
     ) -> pd.DataFrame:
-        """Initialize the calculation of Debye scattering factors.
+        r"""Initialize the calculation of Debye scattering factors.
 
         Scatering factors are calculated for all possible atom-pairs in **atom_subset** and
-        returned as a dataframe.
+        returned as a dataframe:
+
+        .. math::
+
+            I(q) = \sum_{i}^{n_{1}} \sum_{j \ne i}^{n_{2}} f_{i}(q) f_{j}(q)
+            \frac{\sin(q r_{ij})}{q r_{ij}}
+            \quad \text{with} \quad
+            q = \frac{4 \pi \sin(\theta)}{\lambda}
+
+        The :math:`f_{i}(q)` are the X-ray scattering factors of the atoms
+        (:data:`~FOX.functions.debye.SCATERING_FACTORS`).
+        A pair of identical elements (*e.g.* ``"Cd Cd"``) counts every two atoms twice
+        (:math:`i, j` and :math:`j, i`) and a pair of different elements only once,
+        so the total scattering of all atoms is the sum of the identical-element columns
+        plus twice the sum of the others.
 
         Parameters
         ----------
         half_angle : :class:`float` or :class:`np.ndarray`
-            One or more half angles. Units should be in radian.
-        wavelength : :class:`float`
-            One or wavelengths. Units should be in nanometer.
+            One or more half angles :math:`\theta`, *i.e.* half the scattering angle
+            :math:`2 \theta`. Units should be in radian.
+        wavelength : :class:`float` or :class:`np.ndarray`
+            One or more wavelengths :math:`\lambda`, broadcasted against **half_angle**.
+            Units should be in nanometer.
         mol_subset : :class:`slice`, optional
             Perform the calculation on a subset of molecules in this instance, as
             determined by their moleculair index.
@@ -1835,6 +1851,7 @@ class MultiMolecule(_MultiMolecule):
         :class:`pd.DataFrame <pandas.DataFrame>`
             A dataframe of with the Debye scattering, averaged over all conformations.
             Keys are of the form: at_symbol1 + ' ' + at_symbol2 (*e.g.* ``"Cd Cd"``).
+            The index holds the scattering vector lengths :math:`q` in Angstrom**-1.
 
         """
         pair_dict: Mapping[str, Sequence[np.ndarray]]
@@ -1848,9 +1865,14 @@ class MultiMolecule(_MultiMolecule):
             # If **atom_subset** is None: extract atomic symbols from they keys of **self.atoms**
             pair_dict = self.get_pair_dict(sorted(self.atoms, key=str), r=2)
 
+        # The length of the scattering vector in Angstrom**-1
+        wavelength_ang = np.asarray(wavelength, dtype=np.float64)
+        wavelength_ang = wavelength_ang * Units.conversion_ratio("nm", "angstrom")
+        q = np.atleast_1d(np.abs(4 * np.pi * np.sin(half_angle) / wavelength_ang))
+        if q.ndim != 1:
+            raise ValueError("`half_angle` and `wavelength` must be scalars or 1D arrays")
+
         # Construct an empty dataframe with appropiate dimensions, indices and keys
-        q = np.atleast_1d(np.abs(4 * np.pi * np.sin(half_angle / wavelength)))
-        q *= Units.conversion_ratio("nm", "angstrom")
         df = pd.DataFrame(
             0.0,
             columns=pd.Index(pair_dict.keys(), name='Atom pairs'),
@@ -1859,18 +1881,18 @@ class MultiMolecule(_MultiMolecule):
 
         # Define the subset
         m_subset = self._get_mol_subset(mol_subset)
-        m_self = self[m_subset] * Units.conversion_ratio("angstrom", "au")
+        m_self = self[m_subset]
 
-        # Parse the lattice and periodicty settings; the lattice must be in Bohr too
+        # Parse the lattice and periodicty settings
         lattice_ar, periodic_ar = self._get_periodicity(periodic, m_subset)
-        if not isinstance(lattice_ar, _GetNone):
-            lattice_ar = lattice_ar * Units.conversion_ratio("angstrom", "au")
 
         # Fill the dataframe with Debye scatterings, averaged over all conformations
         n_mol = len(m_self)
         symbol_ar = self.symbol
         for key, (i, j) in pair_dict.items():
-            shape = n_mol, len(i), len(j)
+            # Split the molecules into chunks such that the (m, n1, n2, k) array
+            # of `get_debye_scattering` fits in memory
+            shape = n_mol, len(i), len(j), len(q)
             iterator = slice_iter(shape, m_self.dtype.itemsize)
             for slc in iterator:
                 dist_mat = m_self.get_dist_mat(

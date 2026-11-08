@@ -97,12 +97,17 @@ SCATERING_FACTORS = _load_scattering_df()
 
 
 def _get_scattering(symbol: NDArray[U], q: NDArray[f8]) -> NDArray[f8]:
-    """Computer the scattering factors for the given atomic symbols."""
-    stol2 = (q / (4 * np.pi))**2
+    r"""Compute the X-ray scattering factors of the given atomic symbols.
+
+    Returns an array of shape :math:`(n, k)` for :math:`n` symbols and :math:`k` scattering
+    vector lengths :math:`q = 4 \pi \sin(\theta) / \lambda`, given in Angstrom**-1.
+    """
+    stol2 = (q / (4 * np.pi))**2  # (sin(theta) / lambda)**2
     a = SCATERING_FACTORS.loc[symbol, "a"].values
     b = SCATERING_FACTORS.loc[symbol, "b"].values
-    ret = SCATERING_FACTORS.loc[symbol, ("c", 0)].values.copy()
-    ret += (a * np.exp(-b * stol2)).sum(axis=1)
+    c = SCATERING_FACTORS.loc[symbol, ("c", 0)].values
+    ret = (a[..., None] * np.exp(-b[..., None] * stol2)).sum(axis=1)
+    ret += c[:, None]
     return ret
 
 
@@ -114,7 +119,35 @@ def get_debye_scattering(
     scattering_vector: NDArray[f8],
     validate_param: bool = True,
 ) -> NDArray[f8]:
-    """Placeholder."""
+    r"""Compute the Debye scattering of two sets of atoms.
+
+    .. math::
+
+        I(q) = \sum_{i}^{n_{1}} \sum_{j}^{n_{2}} f_{i}(q) f_{j}(q) \frac{\sin(q r_{ij})}{q r_{ij}}
+
+    Pairs at a distance :math:`r_{ij} = 0` (*i.e.* an atom and itself) are skipped,
+    as are distances that are NaN.
+
+    Parameters
+    ----------
+    dist_mat : :class:`np.ndarray[np.float64] <numpy.ndarray>`, shape :math:`(m, n_{1}, n_{2})`
+        The distance matrices of :math:`m` molecules in Angstrom.
+    symbols1 : :class:`np.ndarray[np.str_] <numpy.ndarray>`, shape :math:`(n_{1},)`
+        The atomic symbols along the second axis of **dist_mat**.
+    symbols2 : :class:`np.ndarray[np.str_] <numpy.ndarray>`, shape :math:`(n_{2},)`
+        The atomic symbols along the third axis of **dist_mat**.
+    scattering_vector : :class:`np.ndarray[np.float64] <numpy.ndarray>`, shape :math:`(k,)`
+        The lengths of the scattering vector, :math:`q = 4 \pi \sin(\theta) / \lambda`,
+        in Angstrom**-1.
+    validate_param : :class:`bool`
+        Whether to convert the arguments to arrays and to check their dimensions.
+
+    Returns
+    -------
+    :class:`np.ndarray[np.float64] <numpy.ndarray>`, shape :math:`(m, k)`
+        The Debye scattering of each molecule at each scattering vector.
+
+    """
     if validate_param:
         dist_mat = np.array(dist_mat, dtype=np.float64, ndmin=3, copy=COPY_IF_NEEDED)
         scattering_vector = np.array(
@@ -131,13 +164,13 @@ def get_debye_scattering(
         except AssertionError as ex:
             raise ValueError(str(ex)) from None
 
-    q_r_ij = scattering_vector * dist_mat
     f_ij = (
-        _get_scattering(symbols1, scattering_vector)[..., None] *
-        _get_scattering(symbols2, scattering_vector)[None, ...]
+        _get_scattering(symbols1, scattering_vector)[:, None, :] *
+        _get_scattering(symbols2, scattering_vector)[None, :, :]
     )
 
-    ret = np.sin(q_r_ij)
-    ret /= q_r_ij
-    ret *= f_ij[None, ...]
+    # sin(x) / x, which `np.sinc` defines as 1 for x = 0 (i.e. q = 0)
+    ret = np.sinc(dist_mat[..., None] * (scattering_vector / np.pi))
+    ret[dist_mat == 0] = 0
+    ret *= f_ij
     return np.nansum(ret, axis=(1, 2))

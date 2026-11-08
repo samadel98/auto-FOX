@@ -69,8 +69,13 @@ Unreleased
   The distribution works as an ARMC PES descriptor.
 * Fix periodic ``MultiMolecule.init_rdf`` and ``init_debye_scattering`` failing on trajectories
   large enough to be processed in chunks.
-* Fix periodic ``MultiMolecule.init_debye_scattering`` comparing distances in Bohr with a
-  lattice in Ångström.
+* Fix ``MultiMolecule.init_debye_scattering``, whose results were wrong: it computed the
+  scattering vector as :math:`4 \pi \sin(\theta / \lambda)` instead of
+  :math:`4 \pi \sin(\theta) / \lambda`, converted it from nm\ :sup:`-1` to Å\ :sup:`-1` with a
+  factor 10 instead of 0.1, and multiplied it with distances in Bohr (and, if periodic, used a
+  lattice in Ångström). Arrays of angles or wavelengths now work too; they raised an error.
+* ``FOX.functions.debye.get_debye_scattering`` now returns an array of shape :math:`(m, k)`,
+  one column per scattering vector, and takes distances in Ångström.
 * ``import FOX`` no longer hides pandas ``PerformanceWarning`` for the whole program,
   only for Auto-FOX's own code.
 * CI: show the test coverage in the job summary instead of uploading it to Codecov.
