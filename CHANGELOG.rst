@@ -25,8 +25,11 @@ Unreleased
 * Add the ``armc_report`` command, which summarizes and plots the results of an ARMC .hdf5 file.
 * Fix ``armc2yaml`` failing on the ``!!python/...`` tags that ``init_armc`` accepts.
 * Add ``MultiMolecule.from_file``, which reads any trajectory format supported by ASE.
-* Fix the psf recipes on PLAMS >= 2024. PLAMS stays capped below 2024 until a QMFlows
-  release supports the newer PLAMS versions.
+* Fix the psf recipes on PLAMS >= 2024.
+* Depend on QMFlows from the `samadel98/qmflows <https://github.com/samadel98/qmflows>`_ fork
+  and drop the ``plams<2024`` cap, so that Auto-FOX installs the current PLAMS by default.
+  The QMFlows releases on PyPI do not support PLAMS 2025 or NumPy 2. PyPI does not accept
+  packages with such a git dependency, so a PyPI release first needs a QMFlows release there.
 * Stop using pandas features that pandas 4 will remove.
 * Add a ``slow`` pytest marker: ``pytest -m "not slow"`` skips the slowest tests.
 * Do not let a broken CAT install break ``import FOX``.

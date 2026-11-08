@@ -71,9 +71,6 @@ jobs:
                 run: |
                     if [[ "${{ matrix.special }}" == '; pre-release' ]]; then
                         pip install --pre -e .[test-no-optional] --upgrade --force-reinstall
-                        # The QMFlows fork and the newest PLAMS: no QMFlows release supports PLAMS >= 2024 yet,
-                        # hence the `plams<2024` cap in pyproject.toml
-                        pip install git+https://github.com/samadel98/qmflows@master --upgrade
                         pip install git+https://github.com/NLeSC/noodles@master --upgrade
                         pip install --pre plams rdkit --upgrade
                     elif [[ $SPECIAL"${{ matrix.special }}" == '; minimum version' ]]; then
