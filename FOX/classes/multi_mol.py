@@ -96,6 +96,19 @@ class _GetNone:
         return None
 
 
+def _get_chunk(ar: Any, slc: slice, ndim: int) -> Any:
+    """Return the part of **ar** belonging to the frames in **slc**.
+
+    An **ar** with **ndim** dimensions (a single lattice or volume)
+    applies to all frames and is returned as is.
+    """
+    if isinstance(ar, _GetNone):
+        return None
+    elif ar is None or np.ndim(ar) == ndim:
+        return ar
+    return ar[slc]
+
+
 def _parse_atom_pairs(
     mol: MultiMolecule,
     atom_pairs: Iterable[tuple[str, str]],
@@ -1465,6 +1478,21 @@ class MultiMolecule(_MultiMolecule):
         """
         raise DeprecationWarning("`MultiMolecule.get_at_idx` is deprecated")
 
+    def _get_periodicity(
+        self,
+        periodic: None | Sequence[Literal["x", "y", "z"]] | Sequence[Literal[0, 1, 2]],
+        mol_subset: slice,
+    ) -> tuple[npt.NDArray[np.float64] | _GetNone, npt.NDArray[np.intp]]:
+        """Parse the **periodic** argument, returning the lattice and the periodic axes."""
+        if periodic is None:
+            return _GetNone(), np.arange(3, dtype=np.intp)
+        periodic_ar = parse_periodic(periodic)
+        if self.lattice is None:
+            raise TypeError("cannot perform periodic calculations if the "
+                            "molecules `lattice` is None")
+        lattice_ar = self.lattice if self.lattice.ndim == 2 else self.lattice[mol_subset]
+        return lattice_ar, periodic_ar
+
     """#############################  Radial Distribution Functions  ##########################"""
 
     def init_rdf(
@@ -1533,18 +1561,8 @@ class MultiMolecule(_MultiMolecule):
         m_self = self[m_subset]
 
         # Parse the lattice and periodicty settings
-        lattice_ar: np.ndarray | _GetNone
-        if periodic is not None:
-            periodic_ar = parse_periodic(periodic)
-            if self.lattice is None:
-                raise TypeError("cannot perform periodic calculations if the "
-                                "molecules `lattice` is None")
-            lattice_ar = self.lattice if self.lattice.ndim == 2 else self.lattice[m_subset]
-            volume = lattice_to_volume(lattice_ar)
-        else:
-            volume = None
-            lattice_ar = _GetNone()
-            periodic_ar = np.arange(3, dtype=np.int64)
+        lattice_ar, periodic_ar = self._get_periodicity(periodic, m_subset)
+        volume = None if isinstance(lattice_ar, _GetNone) else lattice_to_volume(lattice_ar)
 
         # Fill the dataframe with RDF's, averaged over all conformations in this instance
         n_mol = len(m_self)
@@ -1554,9 +1572,11 @@ class MultiMolecule(_MultiMolecule):
             for slc in iterator:
                 dist_mat = m_self.get_dist_mat(
                     mol_subset=slc, atom_subset=(i, j),
-                    lattice=lattice_ar[slc], periodicity=periodic_ar,
+                    lattice=_get_chunk(lattice_ar, slc, ndim=2), periodicity=periodic_ar,
                 )
-                df[key] += get_rdf(dist_mat, dr=dr, r_max=r_max, volume=volume)
+                df[key] += get_rdf(
+                    dist_mat, dr=dr, r_max=r_max, volume=_get_chunk(volume, slc, ndim=0)
+                )
         df /= n_mol
         return df
 
@@ -1628,17 +1648,10 @@ class MultiMolecule(_MultiMolecule):
         m_subset = self._get_mol_subset(mol_subset)
         m_self = self[m_subset] * Units.conversion_ratio("angstrom", "au")
 
-        # Parse the lattice and periodicty settings
-        lattice_ar: np.ndarray | _GetNone
-        if periodic is not None:
-            periodic_ar = parse_periodic(periodic)
-            if self.lattice is None:
-                raise TypeError("cannot perform periodic calculations if the "
-                                "molecules `lattice` is None")
-            lattice_ar = self.lattice if self.lattice.ndim == 2 else self.lattice[m_subset]
-        else:
-            lattice_ar = _GetNone()
-            periodic_ar = np.arange(3, dtype=np.int64)
+        # Parse the lattice and periodicty settings; the lattice must be in Bohr too
+        lattice_ar, periodic_ar = self._get_periodicity(periodic, m_subset)
+        if not isinstance(lattice_ar, _GetNone):
+            lattice_ar = lattice_ar * Units.conversion_ratio("angstrom", "au")
 
         # Fill the dataframe with Debye scatterings, averaged over all conformations
         n_mol = len(m_self)
@@ -1649,7 +1662,7 @@ class MultiMolecule(_MultiMolecule):
             for slc in iterator:
                 dist_mat = m_self.get_dist_mat(
                     mol_subset=slc, atom_subset=(i, j),
-                    lattice=lattice_ar[slc], periodicity=periodic_ar,
+                    lattice=_get_chunk(lattice_ar, slc, ndim=2), periodicity=periodic_ar,
                 )
                 df[key] += get_debye_scattering(
                     dist_mat, symbol_ar[i], symbol_ar[j], q, validate_param=False

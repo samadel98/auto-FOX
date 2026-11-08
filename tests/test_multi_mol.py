@@ -708,3 +708,25 @@ def test_rdf_range_subset() -> None:
     ref = MOL.init_rdf(mol_subset=np.s_[:2], atom_subset=[MOL.atoms["Cd"][:10], "Cd"])
     np.testing.assert_allclose(rdf.values, ref.values)
     assert rdf.columns.tolist() == ["range(0, 10) range(0, 10)", "range(0, 10) Cd", "Cd Cd"]
+
+
+@pytest.mark.parametrize("mol", [MOL_LATTICE_2D, MOL_LATTICE_3D], ids=["2d", "3d"])
+def test_rdf_periodic_chunks(mol: MultiMolecule, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test periodic RDFs whose distance matrices are split into chunks of molecules."""
+    import functools
+    import FOX.classes.multi_mol
+
+    ref = mol.init_rdf(periodic="xyz")
+    slice_iter = functools.partial(FOX.classes.multi_mol.slice_iter, nbytes_max=50_000)
+    monkeypatch.setattr(FOX.classes.multi_mol, "slice_iter", slice_iter)
+    np.testing.assert_allclose(mol.init_rdf(periodic="xyz"), ref)
+
+
+def test_debye_periodic_units() -> None:
+    """Test that a box much larger than the molecule leaves the Debye scattering unchanged."""
+    mol = MOL[:5].copy()
+    ref = mol.init_debye_scattering(1, 1, atom_subset=["Cd", "Se"])
+    mol.lattice = np.eye(3) * 60  # Twice the largest distance in the quantum dot
+    np.testing.assert_allclose(
+        mol.init_debye_scattering(1, 1, atom_subset=["Cd", "Se"], periodic="xyz"), ref
+    )
