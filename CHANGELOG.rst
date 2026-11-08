@@ -64,6 +64,13 @@ Unreleased
   and ``MultiMolecule.init_diffusion_coefficient``, self-diffusion coefficients from its slope.
   Both unwrap periodic trajectories with ``periodic``, and both work as ARMC PES descriptors.
   The functions behind them are in the new ``FOX.functions.msd`` module.
+* Add ``MultiMolecule.get_coordination_number``, ``init_coordination_number`` and
+  ``init_coordination_distribution``, which count the neighbours of atoms within a distance.
+  The distribution works as an ARMC PES descriptor.
+* Fix periodic ``MultiMolecule.init_rdf`` and ``init_debye_scattering`` failing on trajectories
+  large enough to be processed in chunks.
+* Fix periodic ``MultiMolecule.init_debye_scattering`` comparing distances in Bohr with a
+  lattice in Ångström.
 
 
 1.0.0
