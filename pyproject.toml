@@ -157,7 +157,7 @@ markers = [
 ]
 addopts = "--tb=short --cov=FOX --cov-report xml --cov-report term --cov-report html --pdbcls=IPython.terminal.debugger:TerminalPdb"
 filterwarnings = [
-    "ignore::pandas.errors.PerformanceWarning",
+    "ignore::pandas.errors.PerformanceWarning:FOX\\.",
     "ignore:numpy\\.ufunc size changed, may indicate binary incompatibility\\. Expected [0-9]+ from C header, got [0-9]+ from PyObject:RuntimeWarning",
     "ignore::DeprecationWarning:numpy.distutils.*",
     "ignore:elementwise comparison failed:FutureWarning:pandas",

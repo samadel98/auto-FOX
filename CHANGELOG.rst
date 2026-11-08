@@ -71,6 +71,9 @@ Unreleased
   large enough to be processed in chunks.
 * Fix periodic ``MultiMolecule.init_debye_scattering`` comparing distances in Bohr with a
   lattice in Ångström.
+* ``import FOX`` no longer hides pandas ``PerformanceWarning`` for the whole program,
+  only for Auto-FOX's own code.
+* CI: show the test coverage in the job summary instead of uploading it to Codecov.
 
 
 1.0.0

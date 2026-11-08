@@ -103,12 +103,13 @@ jobs:
                         pytest -m "not slow"
                     fi
 
-            -   name: Run codecov
-                uses: codecov/codecov-action@v7
-                with:
-                    files: ./coverage.xml
-                    name: codecov-umbrella
-                    token: ${{ secrets.CODECOV_TOKEN }}
+            -   name: Coverage summary
+                run: |
+                    echo "### Test coverage: $(coverage report --format=total)%" >> "$GITHUB_STEP_SUMMARY"
+                    echo "<details><summary>Coverage per file</summary>" >> "$GITHUB_STEP_SUMMARY"
+                    echo "" >> "$GITHUB_STEP_SUMMARY"
+                    coverage report --format=markdown --skip-covered >> "$GITHUB_STEP_SUMMARY"
+                    echo "</details>" >> "$GITHUB_STEP_SUMMARY"
 
     Linting:
         runs-on: ubuntu-latest
