@@ -38,7 +38,10 @@ from . import recipes, properties
 example_xyz: str = join(dirname(__file__), 'data', 'Cd68Se55_26COO_MD_trajec.xyz')
 del join, dirname
 
-warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+# The ARMC parameters are looked up in an unsorted MultiIndex, for which pandas warns that
+# "indexing past lexsort depth may impact performance". Only ignore the warnings raised from
+# Auto-FOX's own code: a filter for all modules would also hide those of the user's code.
+warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning, module=r"FOX(\.|$)")
 del pd, warnings
 
 __all__ = [

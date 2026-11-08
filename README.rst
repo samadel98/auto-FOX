@@ -3,8 +3,6 @@
     :target: https://github.com/samadel98/auto-FOX/actions/workflows/pythonpackage.yml?query=branch%3Amaster
 .. image:: https://readthedocs.org/projects/auto-fox/badge/?version=latest
     :target: https://auto-fox.readthedocs.io/en/latest/
-.. image:: https://codecov.io/gh/samadel98/auto-FOX/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/samadel98/auto-FOX
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3988142.svg
     :target: https://doi.org/10.5281/zenodo.3988142
 .. image:: https://badge.fury.io/py/Auto-FOX.svg
