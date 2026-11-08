@@ -56,8 +56,10 @@ dependencies = [
     "schema>=0.7.1,!=0.7.5",
     "noodles>=0.3.3",
     "h5py>=3.6.0",
-    "qmflows>=0.12.0",
-    "plams>=1.5.1,<2024",  # PLAMS 2024 breaks the psf recipes; 2025 removed `ADFJob` (used by QMFlows)
+    # The QMFlows releases on PyPI need PLAMS < 2025 (`ADFJob`) and NumPy < 2;
+    # the samadel98 fork supports the current PLAMS, NumPy and pandas versions
+    "qmflows @ git+https://github.com/samadel98/qmflows",
+    "plams>=1.5.1",
     "packaging>=17.1",
     "cma>=4.0.0",  # cma < 4 does not support NumPy 2
 ]

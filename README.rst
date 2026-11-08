@@ -107,6 +107,9 @@ Installing **Auto-FOX**
 - Install **Auto-FOX** from this repository:
   ``pip install git+https://github.com/samadel98/auto-FOX``
 
+  - This also installs QMFlows from the `samadel98/qmflows <https://github.com/samadel98/qmflows>`_
+    fork, which supports the current PLAMS versions, so ``git`` must be available.
+
   - ``pip install auto-FOX`` installs the last release on PyPI (0.10.2, from 2022),
     which predates the fixes in this repository (*e.g.* NumPy 2 and pandas 2 support).
 
