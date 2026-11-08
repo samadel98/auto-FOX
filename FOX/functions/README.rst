@@ -21,6 +21,12 @@ cp2k_utils.py_
 A module with miscellaneous functions related to CP2K_.
 
 ~~~~~~~
+msd.py_
+~~~~~~~
+
+A module for calculating mean squared displacements and diffusion coefficients.
+
+~~~~~~~
 rdf.py_
 ~~~~~~~
 
@@ -36,6 +42,7 @@ A module with miscellaneous functions.
 .. _adf: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/adf.py
 .. _charge_utils: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/charge_utils.py
 .. _cp2k_utils: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/cp2k_utils.py
+.. _msd: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/msd.py
 .. _rdf: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/rdf.py
 .. _utils: https://github.com/samadel98/auto-FOX/blob/master/FOX/functions/utils.py
 

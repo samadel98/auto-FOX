@@ -4,6 +4,7 @@ Auto-FOX Documentation
 .. toctree::
     1_rdf
     2_rmsd
+    13_msd
     3_multimolecule
     4_monte_carlo
     4_monte_carlo_args

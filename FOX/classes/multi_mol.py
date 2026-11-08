@@ -52,6 +52,7 @@ from ..functions.adf import get_adf_df, _adf_inner_cdktree, _adf_inner
 from ..functions.molecule_utils import fix_bond_orders, separate_mod
 from ..functions.periodic import parse_periodic
 from ..functions.debye import get_debye_scattering
+from ..functions.msd import get_msd, unwrap, get_diffusion_coefficient
 
 if TYPE_CHECKING:
     import numpy.typing as npt
@@ -1095,6 +1096,175 @@ class MultiMolecule(_MultiMolecule):
         mean_coords = np.mean(self[i, j, :], axis=0)[None, ...]
         displacement = np.linalg.norm(self[i, j, :] - mean_coords, axis=2)**2
         return np.mean(displacement, axis=0)
+
+    """##############################  Mean Squared Displacement  #############################"""
+
+    def init_msd(
+        self,
+        timestep: float = 1.0,
+        mol_subset: MolSubset = None,
+        atom_subset: AtomSubset = None,
+        periodic: None | str | Sequence[str] | Sequence[int] = None,
+        max_lag: None | int = None,
+    ) -> pd.DataFrame:
+        r"""Calculate the mean squared displacement (MSD) as a function of the lag time.
+
+        The MSD is averaged over all atoms in an atom subset and over all time origins,
+        so that every frame contributes to every lag time:
+
+        .. math::
+
+            \mathrm{MSD}(\tau) = \frac{1}{N} \sum_{i=1}^{N} \frac{1}{M - \tau}
+            \sum_{t=0}^{M - \tau - 1} \left( \mathbf{r}_{i}(t + \tau) - \mathbf{r}_{i}(t) \right)^2
+
+        Examples
+        --------
+        .. code:: python
+
+            >>> from FOX import MultiMolecule, example_xyz
+
+            >>> mol = MultiMolecule.from_xyz(example_xyz)
+            >>> msd = mol.init_msd(timestep=1.0, atom_subset=('Cd', 'Se', 'O'))
+            >>> diffusion_coefficient = mol.init_diffusion_coefficient(atom_subset='O')
+
+        Parameters
+        ----------
+        timestep : :class:`float`
+            The stepsize, in femtoseconds, between subsequent frames.
+        mol_subset : :class:`slice`, optional
+            Perform the calculation on a subset of molecules in this instance, as
+            determined by their moleculair index.
+            Include all :math:`m` molecules in this instance if :data:`None`.
+        atom_subset : :class:`Sequence[str] <collections.abc.Sequence>`, optional
+            Perform the calculation on a subset of atoms in this instance, as
+            determined by their atomic index or atomic symbol.
+            Include all :math:`n` atoms per molecule in this instance if :data:`None`.
+        periodic : :class:`str` or :class:`Sequence[str|int] <collections.abc.Sequence>`, optional
+            If specified, unwrap the coordinates along these periodic axes
+            (``"x"``, ``"y"`` and/or ``"z"``) before calculating the MSD, so that atoms
+            crossing a boundary of the box don't appear to jump.
+            Requires :attr:`MultiMolecule.lattice`. See :func:`FOX.functions.msd.unwrap`.
+        max_lag : :class:`int`, optional
+            The longest lag time, in frames, to include.
+            Defaults to all lag times, up to the number of frames minus 1.
+            When used as an ARMC PES descriptor, set it to at most the number of frames of
+            the shortest trajectory so that the reference and the MD results have the same shape.
+
+        Returns
+        -------
+        :class:`pd.DataFrame <pandas.DataFrame>`
+            A dataframe of MSDs, in Å\ :sup:`2`, with one column for every string or list of
+            ints in **atom_subset** and the lag times, in fs, as index.
+
+        See Also
+        --------
+        :meth:`MultiMolecule.init_diffusion_coefficient`
+            Calculate self-diffusion coefficients from the mean squared displacement.
+
+        """
+        kwargs = {'mol_subset': mol_subset, 'periodic': periodic, 'max_lag': max_lag}
+        df = self._get_average_prop(self.get_msd, atom_subset, **kwargs)
+        df.index = pd.Index(df.index.to_numpy() * float(timestep), name='Time / fs')
+        return df
+
+    def get_msd(
+        self,
+        mol_subset: MolSubset = None,
+        atom_subset: AtomSubset = None,
+        periodic: None | str | Sequence[str] | Sequence[int] = None,
+        max_lag: None | int = None,
+    ) -> np.ndarray[Any, np.dtype[np.float64]]:
+        """Calculate the mean squared displacement (MSD) as a function of the lag time.
+
+        Parameters
+        ----------
+        mol_subset : :class:`slice`, optional
+            Perform the calculation on a subset of molecules in this instance, as
+            determined by their moleculair index.
+            Include all :math:`m` molecules in this instance if :data:`None`.
+        atom_subset : :class:`Sequence[str] <collections.abc.Sequence>`, optional
+            Perform the calculation on a subset of atoms in this instance, as
+            determined by their atomic index or atomic symbol.
+            Include all :math:`n` atoms per molecule in this instance if :data:`None`.
+        periodic : :class:`str` or :class:`Sequence[str|int] <collections.abc.Sequence>`, optional
+            If specified, unwrap the coordinates along these periodic axes before
+            calculating the MSD. Requires :attr:`MultiMolecule.lattice`.
+        max_lag : :class:`int`, optional
+            The longest lag time, in frames, to include.
+            Defaults to all lag times, up to the number of frames minus 1.
+
+        Returns
+        -------
+        :class:`np.ndarray[np.float64] <numpy.ndarray>`
+            The MSD, averaged over all atoms in **atom_subset**,
+            for lag times of 0 up to the number of frames minus 1 (or **max_lag**).
+
+        """
+        i = self._get_mol_subset(mol_subset)
+        j = self._get_atom_subset(atom_subset)
+        xyz = np.asarray(self[i, j, :], dtype=np.float64)
+        if xyz.ndim == 2:
+            xyz = xyz[:, None, :]
+
+        if periodic is not None:
+            if self.lattice is None:
+                raise TypeError("cannot unwrap periodic coordinates if the "
+                                "molecules `lattice` is None")
+            lattice = self.lattice if self.lattice.ndim == 2 else self.lattice[i]
+            xyz = unwrap(xyz, lattice, periodic)
+        return get_msd(xyz, max_lag=max_lag)
+
+    def init_diffusion_coefficient(
+        self,
+        timestep: float = 1.0,
+        mol_subset: MolSubset = None,
+        atom_subset: AtomSubset = None,
+        periodic: None | str | Sequence[str] | Sequence[int] = None,
+        start: None | float = None,
+        stop: None | float = None,
+    ) -> pd.Series:
+        r"""Calculate self-diffusion coefficients from the mean squared displacement.
+
+        Fits a straight line to the mean squared displacement (MSD) of
+        :meth:`MultiMolecule.init_msd` between the lag times **start** and **stop**
+        and applies the Einstein relation, :math:`D = \frac{1}{6} \frac{d\,\mathrm{MSD}}{d\tau}`.
+
+        Parameters
+        ----------
+        timestep : :class:`float`
+            The stepsize, in femtoseconds, between subsequent frames.
+        mol_subset : :class:`slice`, optional
+            Perform the calculation on a subset of molecules in this instance, as
+            determined by their moleculair index.
+            Include all :math:`m` molecules in this instance if :data:`None`.
+        atom_subset : :class:`Sequence[str] <collections.abc.Sequence>`, optional
+            Perform the calculation on a subset of atoms in this instance, as
+            determined by their atomic index or atomic symbol.
+            Include all :math:`n` atoms per molecule in this instance if :data:`None`.
+        periodic : :class:`str` or :class:`Sequence[str|int] <collections.abc.Sequence>`, optional
+            If specified, unwrap the coordinates along these periodic axes before
+            calculating the MSD. Requires :attr:`MultiMolecule.lattice`.
+        start : :class:`float`, optional
+            The shortest lag time, in fs, used in the fit.
+            Defaults to 10% of the longest lag time.
+        stop : :class:`float`, optional
+            The longest lag time, in fs, used in the fit.
+            Defaults to 50% of the longest lag time.
+
+        Returns
+        -------
+        :class:`pd.Series <pandas.Series>`
+            The diffusion coefficient, in m\ :sup:`2`/s, of every string or list of ints
+            in **atom_subset**.
+
+        See Also
+        --------
+        :func:`FOX.functions.msd.get_diffusion_coefficient`
+            Calculate self-diffusion coefficients from mean squared displacements.
+
+        """
+        msd = self.init_msd(timestep, mol_subset, atom_subset, periodic)
+        return get_diffusion_coefficient(msd, start=start, stop=stop)
 
     @overload
     @staticmethod
