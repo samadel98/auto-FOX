@@ -517,9 +517,11 @@ def test_armc_phi_auto(tmp_path: Path) -> None:
 @pytest.mark.parametrize('func,kwargs', [
     ('FOX.MultiMolecule.init_msd', {'atom_subset': ['Cd', 'Se'], 'max_lag': 50}),
     ('FOX.MultiMolecule.init_diffusion_coefficient', {'atom_subset': ['Cd', 'Se', 'O']}),
-], ids=['msd', 'diffusion_coefficient'])
-def test_armc_msd(func: str, kwargs: Dict[str, Any], tmp_path: Path) -> None:
-    """Test the MSD and diffusion coefficients as PES descriptors."""
+    ('FOX.MultiMolecule.init_coordination_distribution',
+     {'atom_pairs': [['Cd', 'O'], ['Cd', 'Se']], 'r_max': 3.0, 'cn_max': 4}),
+], ids=['msd', 'diffusion_coefficient', 'coordination_distribution'])
+def test_armc_descriptor(func: str, kwargs: Dict[str, Any], tmp_path: Path) -> None:
+    """Test the MSD, diffusion coefficients and coordination numbers as PES descriptors."""
     pes = {'msd': {'func': func, 'kwargs': kwargs}}
     armc, job_kwargs = _get_seeded_armc(
         'armc_ref.yaml', tmp_path, 'run', 1, n=1, pes=pes, iter_len=10,

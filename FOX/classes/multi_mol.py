@@ -1478,6 +1478,219 @@ class MultiMolecule(_MultiMolecule):
         """
         raise DeprecationWarning("`MultiMolecule.get_at_idx` is deprecated")
 
+    """###############################  Coordination Numbers  ##################################"""
+
+    def get_coordination_number(
+        self,
+        atom_pair: tuple[str, str],
+        r_max: float,
+        mol_subset: MolSubset = None,
+        *,
+        periodic: None | Sequence[Literal["x", "y", "z"]] | Sequence[Literal[0, 1, 2]] = None,
+    ) -> np.ndarray[Any, np.dtype[np.int64]]:
+        """Count the neighbours of each atom within a distance of **r_max**.
+
+        Parameters
+        ----------
+        atom_pair : :class:`tuple[str, str] <tuple>`
+            The central atoms and their neighbours, as atom types or aliases.
+            For example, ``("Cd", "O")`` counts the O atoms around each Cd atom.
+            An atom is never counted as its own neighbour.
+        r_max : :class:`float`
+            The largest distance, in Ångström, between an atom and its neighbours.
+        mol_subset : :class:`slice`, optional
+            Perform the calculation on a subset of molecules in this instance, as
+            determined by their moleculair index.
+            Include all :math:`m` molecules in this instance if :data:`None`.
+        periodic : :class:`str`, optional
+            If specified, correct for the systems periodicity if
+            :attr:`self.lattice is not None <MultiMolecule.lattice>`.
+            Accepts ``"x"``, ``"y"`` and/or ``"z"``.
+
+        Returns
+        -------
+        :class:`np.ndarray[np.int64] <numpy.ndarray>`, shape :math:`(m, n)`
+            The number of neighbours of each of the :math:`n` central atoms in each of
+            the :math:`m` molecules.
+
+        """
+        if not r_max > 0:
+            raise ValueError(f"`r_max` expected a positive number; observed value: {r_max!r}")
+        (i, j), = _parse_atom_pairs(self, [atom_pair]).values()
+        i = np.asarray(i)
+        j = np.asarray(j)
+        is_self = i[:, None] == j[None, :]
+
+        m_subset = self._get_mol_subset(mol_subset)
+        m_self = self[m_subset]
+        lattice_ar, periodic_ar = self._get_periodicity(periodic, m_subset)
+
+        ret = np.empty((len(m_self), len(i)), dtype=np.int64)
+        shape = len(m_self), len(i), len(j)
+        for slc in slice_iter(shape, m_self.dtype.itemsize):
+            dist_mat = m_self.get_dist_mat(
+                mol_subset=slc, atom_subset=(i, j),
+                lattice=_get_chunk(lattice_ar, slc, ndim=2), periodicity=periodic_ar,
+            )
+            is_neighbour = dist_mat <= r_max
+            is_neighbour[:, is_self] = False
+            ret[slc] = is_neighbour.sum(axis=2)
+        return ret
+
+    def init_coordination_number(
+        self,
+        atom_pairs: Iterable[tuple[str, str]],
+        r_max: float | Mapping[str, float],
+        mol_subset: MolSubset = None,
+        *,
+        periodic: None | Sequence[Literal["x", "y", "z"]] | Sequence[Literal[0, 1, 2]] = None,
+    ) -> pd.DataFrame:
+        """Calculate the average coordination number in each molecule.
+
+        Examples
+        --------
+        .. code:: python
+
+            >>> from FOX import MultiMolecule, example_xyz
+
+            >>> mol = MultiMolecule.from_xyz(example_xyz)
+            >>> cn = mol.init_coordination_number([("Cd", "O"), ("Cd", "Se")], r_max=3.0)
+
+        Parameters
+        ----------
+        atom_pairs : :class:`Iterable[tuple[str, str]] <collections.abc.Iterable>`
+            Pairs of central atoms and their neighbours, as atom types or aliases.
+            For example, ``("Cd", "O")`` counts the O atoms around each Cd atom.
+        r_max : :class:`float` or :class:`Mapping[str, float] <collections.abc.Mapping>`
+            The largest distance, in Ångström, between an atom and its neighbours.
+            Use a mapping for a different distance per atom pair,
+            with keys of the form ``"Cd O"``.
+        mol_subset : :class:`slice`, optional
+            Perform the calculation on a subset of molecules in this instance, as
+            determined by their moleculair index.
+            Include all :math:`m` molecules in this instance if :data:`None`.
+        periodic : :class:`str`, optional
+            If specified, correct for the systems periodicity if
+            :attr:`self.lattice is not None <MultiMolecule.lattice>`.
+            Accepts ``"x"``, ``"y"`` and/or ``"z"``.
+
+        Returns
+        -------
+        :class:`pd.DataFrame <pandas.DataFrame>`
+            The coordination number, averaged over all central atoms, with the molecular
+            indices as index and one column per atom pair (*e.g.* ``"Cd O"``).
+
+        See Also
+        --------
+        :meth:`MultiMolecule.init_coordination_distribution`
+            Calculate the distribution of coordination numbers.
+
+        """
+        dct = self._get_coordination_dict(atom_pairs, r_max, mol_subset, periodic)
+        df = pd.DataFrame({k: v.mean(axis=1) for k, v in dct.items()})
+        df.columns.name = 'Atom pairs'
+        df.index.name = 'XYZ frame number'
+        return df
+
+    def init_coordination_distribution(
+        self,
+        atom_pairs: Iterable[tuple[str, str]],
+        r_max: float | Mapping[str, float],
+        mol_subset: MolSubset = None,
+        *,
+        periodic: None | Sequence[Literal["x", "y", "z"]] | Sequence[Literal[0, 1, 2]] = None,
+        cn_max: None | int = None,
+    ) -> pd.DataFrame:
+        """Calculate the distribution of coordination numbers.
+
+        Gives the fraction of the central atoms that have 0, 1, 2, ... neighbours,
+        averaged over all molecules: for example, how many Cd atoms are bound
+        to 2, 3 or 4 O atoms.
+
+        Examples
+        --------
+        .. code:: python
+
+            >>> from FOX import MultiMolecule, example_xyz
+
+            >>> mol = MultiMolecule.from_xyz(example_xyz)
+            >>> dist = mol.init_coordination_distribution([("Cd", "O")], r_max=3.0, cn_max=4)
+
+        Parameters
+        ----------
+        atom_pairs : :class:`Iterable[tuple[str, str]] <collections.abc.Iterable>`
+            Pairs of central atoms and their neighbours, as atom types or aliases.
+            For example, ``("Cd", "O")`` counts the O atoms around each Cd atom.
+        r_max : :class:`float` or :class:`Mapping[str, float] <collections.abc.Mapping>`
+            The largest distance, in Ångström, between an atom and its neighbours.
+            Use a mapping for a different distance per atom pair,
+            with keys of the form ``"Cd O"``.
+        mol_subset : :class:`slice`, optional
+            Perform the calculation on a subset of molecules in this instance, as
+            determined by their moleculair index.
+            Include all :math:`m` molecules in this instance if :data:`None`.
+        periodic : :class:`str`, optional
+            If specified, correct for the systems periodicity if
+            :attr:`self.lattice is not None <MultiMolecule.lattice>`.
+            Accepts ``"x"``, ``"y"`` and/or ``"z"``.
+        cn_max : :class:`int`, optional
+            The largest coordination number in the index; larger ones are counted as
+            **cn_max**. Defaults to the largest coordination number found.
+            Set it when using this method as an ARMC PES descriptor,
+            so that the reference and the MD results have the same shape.
+
+        Returns
+        -------
+        :class:`pd.DataFrame <pandas.DataFrame>`
+            The fraction of central atoms with each coordination number, with the
+            coordination numbers as index and one column per atom pair (*e.g.* ``"Cd O"``).
+            Each column sums to 1.
+
+        See Also
+        --------
+        :meth:`MultiMolecule.init_coordination_number`
+            Calculate the average coordination number in each molecule.
+
+        """
+        if cn_max is not None and cn_max < 0:
+            raise ValueError(f"`cn_max` expected a non-negative integer; observed value: {cn_max}")
+        dct = self._get_coordination_dict(atom_pairs, r_max, mol_subset, periodic)
+        if cn_max is None:
+            cn_max = max((int(v.max()) for v in dct.values() if v.size), default=0)
+
+        data = {}
+        for key, cn in dct.items():
+            count = np.bincount(np.minimum(cn, cn_max).ravel(), minlength=cn_max + 1)
+            data[key] = count / max(cn.size, 1)
+        df = pd.DataFrame(data, index=pd.RangeIndex(cn_max + 1, name='Coordination number'))
+        df.columns.name = 'Atom pairs'
+        return df
+
+    def _get_coordination_dict(
+        self,
+        atom_pairs: Iterable[tuple[str, str]],
+        r_max: float | Mapping[str, float],
+        mol_subset: MolSubset,
+        periodic: None | Sequence[Literal["x", "y", "z"]] | Sequence[Literal[0, 1, 2]],
+    ) -> dict[str, np.ndarray[Any, np.dtype[np.int64]]]:
+        """Return the coordination numbers of all **atom_pairs**, with ``"Cd O"``-style keys."""
+        pair_list = [] if isinstance(atom_pairs, str) else list(atom_pairs)
+        if isinstance(atom_pairs, str) or (pair_list and isinstance(pair_list[0], str)):
+            raise TypeError("`atom_pairs` expected an iterable of 2-tuples, such as "
+                            "[('Cd', 'O')]; observed a single atom pair or atom type")
+        ret = {}
+        for pair in pair_list:
+            key = " ".join(pair)
+            if isinstance(r_max, abc.Mapping):
+                try:
+                    r = r_max[key]
+                except KeyError:
+                    raise KeyError(f"`r_max` has no distance for the atom pair {key!r}") from None
+            else:
+                r = r_max
+            ret[key] = self.get_coordination_number(pair, r, mol_subset, periodic=periodic)
+        return ret
+
     def _get_periodicity(
         self,
         periodic: None | Sequence[Literal["x", "y", "z"]] | Sequence[Literal[0, 1, 2]],
