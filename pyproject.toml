@@ -71,7 +71,7 @@ armc_report = "FOX.entry_points:main_armc_report"
 [project.urls]
 Homepage = "https://github.com/samadel98/auto-FOX"
 "Bug Tracker" = "https://github.com/samadel98/auto-FOX/issues"
-Documentation = "https://auto-fox.readthedocs.io/en/latest/"
+Documentation = "https://samadel98.github.io/auto-FOX/"
 
 [project.optional-dependencies]
 docs = [

@@ -49,7 +49,7 @@ def main_armc(args: Optional[list] = None) -> None:
         usage='init_armc filename -r restart',
         description=("Initialize the Auto-FOX Adaptive Rate Monte Carlo (ARMC) "
                      "parameter optimizer. "
-                     "See 'https://auto-fox.readthedocs.io/en/latest/4_monte_carlo.html' for "
+                     "See 'https://samadel98.github.io/auto-FOX/4_monte_carlo.html' for "
                      "a more detailed description.")
     )
 
