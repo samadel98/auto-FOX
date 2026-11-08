@@ -17,6 +17,7 @@ import yaml
 from schema import SchemaError
 from assertionlib import assertion
 
+from FOX import MultiMolecule
 from FOX._nanoutils import delete_finally, UniqueLoader
 from FOX.testing_utils import load_results, compare_hdf5
 from FOX.armc import dict_to_armc, run_armc, ARMC, StopCriteria
@@ -511,6 +512,27 @@ def test_armc_phi_auto(tmp_path: Path) -> None:
     with h5py.File(tmp_path / 'run' / 'armc.hdf5', 'r') as f:
         # phi is added to both terms of the error (one per PES descriptor)
         np.testing.assert_allclose(f['phi'][0], 0.01 * f.attrs['initial_error'] / 2)
+
+
+@pytest.mark.parametrize('func,kwargs', [
+    ('FOX.MultiMolecule.init_msd', {'atom_subset': ['Cd', 'Se'], 'max_lag': 50}),
+    ('FOX.MultiMolecule.init_diffusion_coefficient', {'atom_subset': ['Cd', 'Se', 'O']}),
+], ids=['msd', 'diffusion_coefficient'])
+def test_armc_msd(func: str, kwargs: Dict[str, Any], tmp_path: Path) -> None:
+    """Test the MSD and diffusion coefficients as PES descriptors."""
+    pes = {'msd': {'func': func, 'kwargs': kwargs}}
+    armc, job_kwargs = _get_seeded_armc(
+        'armc_ref.yaml', tmp_path, 'run', 1, n=1, pes=pes, iter_len=10,
+    )
+    run_armc(armc, restart=False, **job_kwargs)
+
+    mol = MultiMolecule.from_xyz(PATH / 'Cd68Se55_26COO_MD_trajec.xyz')
+    ref = np.asarray(getattr(mol, func.rsplit('.', 1)[-1])(**kwargs))
+    with h5py.File(tmp_path / 'run' / 'armc.hdf5', 'r') as f:
+        assertion.eq(f.attrs['super-iteration'], 0)
+        assertion.eq(f.attrs['sub-iteration'], 9)
+        np.testing.assert_allclose(f['msd.0.ref'][:], ref)
+        assertion.assert_(np.isfinite, f['msd.0'][:], post_process=np.all)
 
 
 def test_armc_restart_two_pes(tmp_path: Path) -> None:

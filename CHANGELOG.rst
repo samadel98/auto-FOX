@@ -60,6 +60,10 @@ Unreleased
 * Fix ``FOX.recipes.get_best`` and ``overlay_descriptor`` mixing up the parameter sets of
   ARMC-PT .hdf5 files: ``i`` now selects the parameter set, and ``armc_report`` reports
   the best parameter set of the best iteration.
+* Add ``MultiMolecule.init_msd``, the mean squared displacement averaged over all time origins,
+  and ``MultiMolecule.init_diffusion_coefficient``, self-diffusion coefficients from its slope.
+  Both unwrap periodic trajectories with ``periodic``, and both work as ARMC PES descriptors.
+  The functions behind them are in the new ``FOX.functions.msd`` module.
 
 
 1.0.0
