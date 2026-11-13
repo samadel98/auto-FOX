@@ -19,6 +19,7 @@ API
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import textwrap
 from abc import ABC, abstractmethod
@@ -75,6 +76,32 @@ DataMap = Mapping[str, Iterable[PkgDict]]
 DataIter = Iterable[Tuple[str, Iterable[PkgDict]]]
 
 JobHook = Iterator[Iterable[Result]]
+
+
+#: The statuses of PLAMS jobs that finished successfully.
+_SUCCESSFUL_STATUS = frozenset({'successful', 'copied'})
+
+
+def sync_job_names(job_manager: JobManager) -> None:
+    """Make sure that new jobs never get the name of a file or folder in the working directory.
+
+    PLAMS gives a job the name of an earlier one plus a counter,
+    and the job fails if its folder already exists.
+    The counters in :attr:`JobManager.names` are therefore raised to the highest
+    counter found in the working directory of **job_manager**, as when restarting
+    in a folder that holds jobs which were kept (*e.g.* with ``keep_files: crashed``).
+
+    """
+    counter_len = int(job_manager.settings.get('counter_len', 3))
+    pattern = re.compile(rf"(?:\.(\d{{{counter_len}}}))+?$")
+
+    names = dict(job_manager.names)
+    for file in os.listdir(job_manager.workdir):
+        match = pattern.search(file)
+        counter = int(match.group(1)) if match is not None else 1
+        base = pattern.sub('', file)
+        names[base] = max(names.get(base, 0), counter)
+    job_manager.names = names
 
 
 class PackageManagerABC(ABC, Mapping[str, Value]):
@@ -387,12 +414,21 @@ class PackageManager(PackageManagerABC):
         return obj_type(mol=mol, job_name=job_name, validate_output=False, settings=settings)
 
     @staticmethod
-    def clear_jobs() -> None:  # type: ignore[override]
-        """Delete all jobs."""
+    def clear_jobs(keep_crashed: bool = False) -> None:  # type: ignore[override]
+        """Delete all jobs.
+
+        If **keep_crashed** is :data:`True` the folders of jobs that did not finish
+        successfully are kept.
+        New jobs are then never given the name of a kept folder:
+        the job counters of the job manager are not reset.
+
+        """
         job_manager: JobManager = config.default_jobmanager
         workdir: Union[str, os.PathLike] = job_manager.workdir
 
         for job in job_manager.jobs:
+            if keep_crashed and str(job.status) not in _SUCCESSFUL_STATUS:
+                continue
             name = os.path.join(workdir, job.name)
             try:
                 shutil.rmtree(name)
@@ -400,7 +436,14 @@ class PackageManager(PackageManagerABC):
                 pass
 
         job_manager.jobs = []
-        job_manager.names = {}
+        if not keep_crashed:
+            job_manager.names = {}
+
+        # PLAMS >= 2025.101 keeps a second reference to every registered job;
+        # drop it, or the memory taken by the jobs grows with every MD run
+        full_name_map = getattr(job_manager, '_job_full_name_map', None)
+        if isinstance(full_name_map, dict):
+            full_name_map.clear()
 
     def update_settings(self, dct_seq: Sequence[dict[str, pd.DataFrame]]) -> None:
         """Update all forcefield parameter blocks in this instance's CP2K settings."""

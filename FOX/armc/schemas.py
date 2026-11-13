@@ -268,7 +268,8 @@ mc_schema = Schema({
     Optional_('keep_files', default=True): Or(
         And(None, Default(True)),
         bool,
-        error=Formatter(f"'monte_carlo.keep_files' expected a boolean{EPILOG}")
+        And(str, Use(str.lower), 'crashed'),
+        error=Formatter(f"'monte_carlo.keep_files' expected a boolean or 'crashed'{EPILOG}")
     ),
 
     Optional_('seed', default=None): Or(
@@ -338,7 +339,7 @@ class MCMapping(TypedDict, total=False):
     logfile: Union[None, str, bytes, os.PathLike]
     path: Union[None, str, bytes, os.PathLike]
     folder: Union[None, str, bytes, os.PathLike]
-    keep_files: Optional[bool]
+    keep_files: Union[None, bool, str]
     seed: Union[None, str, bytes, SupportsInt]
     n_jobs: Union[None, str, bytes, SupportsInt]
     stop: Optional[StopMapping]
@@ -356,7 +357,7 @@ class MCDict(TypedDict):
     logfile: str
     path: str
     folder: str
-    keep_files: bool
+    keep_files: Union[bool, Literal['crashed']]
     seed: Optional[int]
     n_jobs: int
     stop: StopDict

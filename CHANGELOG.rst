@@ -70,6 +70,11 @@ Unreleased
   first generation was skipped; it is now always the error of the initial parameters.
 * Fix the atom aliases of a .psf file only being set for the first parameter set of
   ARMC-PT and CMA-ES runs.
+* Add ``monte_carlo.keep_files: crashed``, which deletes the folder of every MD job once its
+  results are read, like ``False``, but keeps the folders of the jobs that crashed.
+* Fix restarts with ``n_jobs`` > 1 in a folder with kept jobs giving a new job the name of an
+  existing folder, which made that job fail.
+* Fix the memory used by PLAMS >= 2025 growing with every MD job when ``keep_files`` is ``False``.
 * Add ``MultiMolecule.init_msd``, the mean squared displacement averaged over all time origins,
   and ``MultiMolecule.init_diffusion_coefficient``, self-diffusion coefficients from its slope.
   Both unwrap periodic trajectories with ``periodic``, and both work as ARMC PES descriptors.
