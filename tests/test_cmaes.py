@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, Generator, Iterable, Optional, Tuple
+from typing import Any, Dict, Generator, Iterable, Mapping, Optional, Sequence, Tuple
 
 import h5py
 import numpy as np
@@ -13,9 +13,10 @@ import pytest
 import yaml
 from assertionlib import assertion
 
-from FOX import from_hdf5
+from FOX import from_hdf5, MultiMolecule
 from FOX._nanoutils import UniqueLoader
 from FOX.armc import dict_to_armc, run_armc, CMAES
+from FOX.armc.mc_post_process import AtomsFromPSF
 from FOX.entry_points import main_armc_report
 from FOX.recipes import get_best
 from FOX.testing_utils import load_results
@@ -56,6 +57,18 @@ def _interrupt_after(iterable: Iterable[Any], n: int) -> Generator[Any, None, No
     for _ in range(n):
         yield next(iterator)
     raise _Interrupt
+
+
+def _crash(
+    hook: Iterable[Tuple[Any, ...]], crashed: Mapping[int, Sequence[int]],
+) -> Generator[Tuple[Any, ...], None, None]:
+    """Yield the results of **hook**, with the jobs ``crashed[i]`` of the ``i``-th item crashed."""
+    for i, results in enumerate(hook):
+        idx = crashed.get(i, ())
+        yield tuple(
+            SimpleNamespace(status='crashed') if j in idx else result
+            for j, result in enumerate(results)
+        )
 
 
 def _charges(armc: CMAES, param: np.ndarray) -> pd.Series:
@@ -330,3 +343,72 @@ def test_cmaes_report(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> Non
     dct = from_hdf5(hdf5)
     assertion.assert_(next, (k for k in dct if k.startswith('cmaes')), exception=StopIteration)
     assertion.contains(dct, 'rdf.0')
+
+
+def test_cmaes_crash(tmp_path: Path) -> None:
+    """Test that a crashed MD job only discards its own candidate, not its whole generation."""
+    armc, job_kwargs = _get_cmaes(tmp_path, 'run')
+    armc.package_manager.hook = _crash(armc.package_manager.hook, {0: [1], 3: [0, 2]})
+    run_armc(armc, restart=False, **job_kwargs)
+    assertion.assert_(next, armc.package_manager.hook, exception=StopIteration)
+
+    with h5py.File(tmp_path / 'run' / 'armc.hdf5', 'r') as f:
+        aux_error = f['aux_error'][:].reshape(-1, 3)
+        acceptance = f['acceptance'][:].reshape(-1, 3)
+        initial_error = f.attrs['initial_error']
+
+    crashed = np.zeros(aux_error.shape, dtype=bool)
+    crashed[0, 1] = crashed[3, 0] = crashed[3, 2] = True
+    np.testing.assert_array_equal(np.isposinf(aux_error), crashed)
+    np.testing.assert_array_equal(np.isfinite(aux_error), ~crashed)
+
+    # Every generation updated the distribution with its best candidate that did not crash
+    assertion.eq(armc._es.countiter, 6)
+    np.testing.assert_array_equal(acceptance.sum(axis=1), 1)
+    np.testing.assert_array_equal(acceptance.argmax(axis=1), aux_error.argmin(axis=1))
+    assertion.assert_(np.any, acceptance & crashed, invert=True)
+
+    # The first candidate holds the initial parameters
+    assertion.isclose(initial_error, aux_error[0, 0])
+    log = (tmp_path / 'run' / 'armc.log').read_text()
+    assertion.contains(log, "1 of 3 MD jobs crashed")
+    assertion.contains(log, "2 of 3 MD jobs crashed")
+    assertion.contains(log, "all MD jobs crashed", invert=True)
+
+
+def test_cmaes_crash_all(tmp_path: Path) -> None:
+    """Test a first generation in which all MD jobs crashed, initial parameters included."""
+    armc, job_kwargs = _get_cmaes(tmp_path, 'run')
+    armc.package_manager.hook = _crash(armc.package_manager.hook, {0: [0, 1, 2]})
+    run_armc(armc, restart=False, **job_kwargs)
+
+    with h5py.File(tmp_path / 'run' / 'armc.hdf5', 'r') as f:
+        aux_error = f['aux_error'][:].reshape(-1, 3)
+        acceptance = f['acceptance'][:].reshape(-1, 3)
+        initial_error = f.attrs['initial_error']
+
+    # The generation is skipped; the error of the initial parameters stays unknown,
+    # rather than being taken from a candidate of a later generation
+    assertion.assert_(np.all, np.isposinf(aux_error[0]))
+    assertion.assert_(np.all, np.isfinite(aux_error[1:]))
+    assertion.assert_(np.any, acceptance[0], invert=True)
+    assertion.eq(armc._es.countiter, 5)
+    assertion.eq(initial_error, np.inf)
+    assertion.contains((tmp_path / 'run' / 'armc.log').read_text(), "all MD jobs crashed")
+
+
+def test_atoms_from_psf() -> None:
+    """Test that a single .psf file sets the atom aliases of every molecule."""
+    mol = MultiMolecule(np.zeros((1, 2, 3)), atoms={'C': [0], 'O': [1]})
+    atom_dict = {'CG2O3': ('C', np.array([0]))}
+    mol_list = [mol.copy(), None, mol.copy()]
+    AtomsFromPSF(atom_dict)(mol_list)
+    for m in (mol_list[0], mol_list[2]):
+        assert m is not None
+        assertion.eq(list(m.atoms_alias), ['CG2O3'])
+
+    # With one .psf file per molecule, every molecule gets its own
+    atom_dict2 = {'OG2D2': ('O', np.array([0]))}
+    mol_list2 = [mol.copy(), mol.copy()]
+    AtomsFromPSF(atom_dict, atom_dict2)(mol_list2)
+    assertion.eq([list(m.atoms_alias) for m in mol_list2], [['CG2O3'], ['OG2D2']])

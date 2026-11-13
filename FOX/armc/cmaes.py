@@ -92,6 +92,10 @@ class CMAES(ARMC):
     so their error is known (and stored in the ``"initial_error"`` attribute of the .hdf5 file)
     without any extra MD job.
 
+    A candidate whose MD job crashed gets an infinite error and ranks below all others;
+    the other candidates of its generation are used as usual.
+    Only a generation in which every MD job crashed is skipped.
+
     The .hdf5 file has the layout of :class:`ARMCPT`, with one parameter set per candidate.
     For :class:`CMAES` the ``"acceptance"`` dataset marks the candidates that were
     selected for updating the distribution and the ``"phi"`` dataset holds the step size
@@ -119,6 +123,7 @@ class CMAES(ARMC):
     """
 
     HAS_LOOP: ClassVar[Literal[True]] = True  # type: ignore[assignment]
+    PARTIAL_RESULTS: ClassVar[Literal[True]] = True  # type: ignore[assignment]
 
     #: The maximum number of times a candidate with a charge outside its bounds is redrawn.
     MAX_REDRAW: ClassVar[int] = 1000
@@ -430,7 +435,6 @@ class CMAES(ARMC):
         """
         es = self._es
         assert es is not None
-        first_generation = es.countiter == 0
 
         # Step 1: Draw the candidates
         x_list = self._ask()
@@ -447,17 +451,23 @@ class CMAES(ARMC):
         error = self._error_totals(aux_new)
         for key, err in zip(key_new, aux_new):
             self[key] = err
-        if first_generation:
+        if (kappa, omega) == (0, 0):
+            # The first candidate of the first generation holds the initial parameters
             self._set_hdf5_attrs(initial_error=error[0])
         self._update_best_error(aux_new, kappa)
 
-        # Step 4: Update the distribution with the best candidates
+        # Step 4: Update the distribution with the best candidates;
+        # crashed candidates have an infinite error, so they rank below all others
         accept = np.zeros(len(error), dtype=np.bool_)
-        if np.isfinite(error).any():
+        finite = np.isfinite(error)
+        if finite.any():
             es.tell(x_list, error.tolist())
             accept[np.argsort(error, kind='stable')[:es.sp.weights.mu]] = True
+            accept &= finite
+            n_crashed = len(error) - np.count_nonzero(finite)
+            crashed = f"; {n_crashed} of {len(error)} MD jobs crashed" if n_crashed else ""
             self.logger.info(f"Generation {(kappa, omega)}: lowest error = "
-                             f"{round(np.min(error), 4)}; step size = {es.sigma:.4g}")
+                             f"{round(np.min(error), 4)}; step size = {es.sigma:.4g}{crashed}")
         else:
             self.logger.warning(f"Generation {(kappa, omega)}: all MD jobs crashed; "
                                 "drawing new candidates")

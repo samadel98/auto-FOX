@@ -305,8 +305,8 @@ class PackageManager(PackageManagerABC):
             prm_to_df(settings)
 
     def __call__(  # type: ignore[override]
-        self, logger: Optional[Logger] = None, n_processes: int = 1
-    ) -> Union[Tuple[None, None], Tuple[List[MultiMolecule], List[Any]]]:
+        self, logger: Optional[Logger] = None, n_processes: int = 1, partial: bool = False,
+    ) -> Union[Tuple[None, None], Tuple[List[Optional[MultiMolecule]], List[Any]]]:
         r"""Run all jobs and return a sequence of list of MultiMolecules.
 
         Parameters
@@ -315,11 +315,15 @@ class PackageManager(PackageManagerABC):
             A logger for reporting job statuses.
         n_processes : :class:`int`
             The number of jobs that are allowed to run at the same time.
+        partial : :class:`bool`
+            If :data:`True`, a crashed job only sets its own molecule to ``None``,
+            so the results of the other jobs can still be used
+            (*e.g.* the other candidates of a :class:`~FOX.armc.CMAES` generation).
 
         Returns
         -------
         :class:`list` [:class:`FOX.MultiMolecule`], optional
-            Returns ``None`` if one of the jobs crashed;
+            Returns ``None`` if one of the jobs crashed (or, with **partial**, if all did);
             a list of MultiMolecule is returned otherwise.
 
         """
@@ -330,7 +334,7 @@ class PackageManager(PackageManagerABC):
         # Check if a hook has been specified
         if self.hook is not None:
             results = next(self.hook)
-            return self._extract_mol(results, logger)
+            return self._extract_mol(results, logger, partial=partial)
 
         # PLAMS picks a job's folder from its name without any locking,
         # so jobs running at the same time need names of their own
@@ -351,7 +355,7 @@ class PackageManager(PackageManagerABC):
                              i, (j, p_j) in enumerate(zip(jobs, promised_jobs))]
 
         results = run_parallel(gather(*promised_jobs), n_threads=n_processes)
-        return self._extract_mol(results, logger)
+        return self._extract_mol(results, logger, partial=partial)
 
     @staticmethod
     @schedule
@@ -406,44 +410,64 @@ class PackageManager(PackageManagerABC):
 
     @overload
     @staticmethod
-    def _extract_mol(results: None, logger: Logger) -> Tuple[None, None]: ...
+    def _extract_mol(
+        results: None, logger: Logger, partial: bool = ...,
+    ) -> Tuple[None, None]: ...
     @overload  # noqa: E301
     @staticmethod
     def _extract_mol(
-        results: Iterable[RT], logger: Logger
-    ) -> Tuple[None, None] | Tuple[List[MultiMolecule], List[RT]]: ...
+        results: Iterable[RT], logger: Logger, partial: bool = ...,
+    ) -> Tuple[None, None] | Tuple[List[Optional[MultiMolecule]], List[RT]]: ...
     @staticmethod  # noqa: E301
     def _extract_mol(
         results: None | Iterable[RT],
         logger: Logger,
-    ) -> Tuple[None, None] | Tuple[List[MultiMolecule], List[RT]]:
-        """Create a list of MultiMolecule from the passed **results**."""
+        partial: bool = False,
+    ) -> Tuple[None, None] | Tuple[List[Optional[MultiMolecule]], List[RT]]:
+        """Create a list of MultiMolecule from the passed **results**.
+
+        A job that crashed (or whose trajectory cannot be read) returns ``(None, None)``,
+        unless **partial** is :data:`True`: its molecule is then set to ``None``
+        and ``(None, None)`` is only returned if all jobs crashed.
+
+        """
         # `noodles.run_parallel()` can return `None` under certain circumstances
         if results is None:
             return None, None
 
-        mol_list = []
+        mol_list: List[Optional[MultiMolecule]] = []
         results_list = list(results)
         for result in results_list:
-            if result.status in {'failed', 'crashed'}:
+            mol = PackageManager._extract_one_mol(result, logger)
+            if mol is None and not partial:
                 return None, None
+            mol_list.append(mol)
 
-            try:
-                lattice: None | np.ndarray[Any, np.dtype[np.float64]] = result.lattice  # type: ignore[attr-defined]  # noqa: E501
-                assert lattice is not None
-            except (AssertionError, FileNotFoundError):
-                lattice = None
-
-            try:  # Construct and return a MultiMolecule object
-                path: str = get_xyz_path(result.archive['work_dir'])  # type: ignore
-                mol = MultiMolecule.from_xyz(path)
-                mol.lattice = lattice
-                mol.round(3, inplace=True)
-                mol_list.append(mol)
-            except XYZError:  # The .xyz file is unreadable for some reason
-                logger.warning(f"Failed to parse {path!r}")
-                return None, None
-            except Exception as ex:
-                logger.warning(ex)
-                return None, None
+        if all(mol is None for mol in mol_list):
+            return None, None
         return mol_list, results_list
+
+    @staticmethod
+    def _extract_one_mol(result: Any, logger: Logger) -> Optional[MultiMolecule]:
+        """Create a MultiMolecule from **result**; return ``None`` if the job crashed."""
+        if result.status in {'failed', 'crashed'}:
+            return None
+
+        try:
+            lattice: None | np.ndarray[Any, np.dtype[np.float64]] = result.lattice
+            assert lattice is not None
+        except (AssertionError, FileNotFoundError):
+            lattice = None
+
+        try:  # Construct and return a MultiMolecule object
+            path: str = get_xyz_path(result.archive['work_dir'])
+            mol = MultiMolecule.from_xyz(path)
+            mol.lattice = lattice
+            mol.round(3, inplace=True)
+        except XYZError:  # The .xyz file is unreadable for some reason
+            logger.warning(f"Failed to parse {path!r}")
+            return None
+        except Exception as ex:
+            logger.warning(ex)
+            return None
+        return mol

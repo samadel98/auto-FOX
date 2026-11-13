@@ -48,8 +48,8 @@ __all__ = ['ARMC']
 PesDict = Dict[str, ArrayOrScalar]
 PesMapping = Mapping[str, ArrayOrScalar]
 
-MolList = List[MultiMolecule]
-MolCollection = Collection[MultiMolecule]
+MolList = List[Optional[MultiMolecule]]
+MolCollection = Collection[Optional[MultiMolecule]]
 
 Key = Tuple[float, ...]
 

@@ -6,7 +6,9 @@ import shutil
 import subprocess
 from os import PathLike
 from pathlib import Path
-from typing import Tuple, Generator, Any, cast, Dict, List, Optional, Union
+from typing import (
+    Tuple, Generator, Any, cast, Dict, List, Optional, Union, Iterable, Mapping, Sequence,
+)
 from itertools import combinations_with_replacement
 from types import SimpleNamespace
 
@@ -578,6 +580,41 @@ def test_armcpt_aux_error(tmp_path: Path) -> None:
                 for kappa, omega in np.ndindex(2, 2):
                     err = default_error_func(ref, f[f'{name}.{i}'][kappa, omega])
                     assertion.isclose(aux_error[kappa, omega, j, i], err, rel_tol=1e-12)
+
+
+def _crash(
+    hook: Iterable[Tuple[Any, ...]], crashed: Mapping[int, Sequence[int]],
+) -> Generator[Tuple[Any, ...], None, None]:
+    """Yield the results of **hook**, with the jobs ``crashed[i]`` of the ``i``-th item crashed."""
+    for i, results in enumerate(hook):
+        idx = crashed.get(i, ())
+        yield tuple(
+            SimpleNamespace(status='crashed') if j in idx else result
+            for j, result in enumerate(results)
+        )
+
+
+def test_armcpt_crash(tmp_path: Path) -> None:
+    """Test that a crashed MD job only rejects the move of its own ARMC-PT parameter set."""
+    kwargs: Dict[str, Any] = dict(n=3, iter_len=4, sub_iter_len=2)
+    armc1, job_kwargs1 = _get_seeded_armc('armcpt_ref.yaml', tmp_path, 'ref', 1, **kwargs)
+    run_armc(armc1, restart=False, **job_kwargs1)
+
+    # The first item of the hook is used for the initial parameters, so 2 is iteration (0, 1)
+    armc2, job_kwargs2 = _get_seeded_armc('armcpt_ref.yaml', tmp_path, 'crash', 1, **kwargs)
+    armc2.package_manager.hook = _crash(armc2.package_manager.hook, {2: [1]})
+    run_armc(armc2, restart=False, **job_kwargs2)
+
+    with h5py.File(tmp_path / 'ref' / 'armc.hdf5', 'r') as f1, \
+            h5py.File(tmp_path / 'crash' / 'armc.hdf5', 'r') as f2:
+        aux_error1, aux_error2 = f1['aux_error'][:], f2['aux_error'][:]
+        acceptance2 = f2['acceptance'][:]
+
+    # Only parameter set 1 of iteration (0, 1) is affected
+    assertion.assert_(np.all, np.isposinf(aux_error2[0, 1, :, 1]))
+    assertion.is_(bool(acceptance2[0, 1, 1]), False)
+    aux_error2[0, 1, :, 1] = aux_error1[0, 1, :, 1]
+    np.testing.assert_array_equal(aux_error2, aux_error1)
 
 
 def test_armcpt_restart(tmp_path: Path) -> None:

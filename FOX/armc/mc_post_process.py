@@ -14,6 +14,7 @@ API
 
 from __future__ import annotations
 
+from itertools import repeat
 from typing import Iterable, List, Optional, TYPE_CHECKING, Mapping, Tuple, Any, Dict
 
 if TYPE_CHECKING:
@@ -62,10 +63,14 @@ class AtomsFromPSF:
         """Initialize the :class:`AtomsFromPsf` instance."""
         self.atom_dict = atom_dict
 
-    def __call__(self, mol_list: Optional[Iterable[MultiMolecule]],
+    def __call__(self, mol_list: Optional[Iterable[Optional[MultiMolecule]]],
                  mc: Optional[ARMC] = None) -> None:
         """Update the :attr:`MultiMolecule.atoms` of **mol_list**."""
         if mol_list is None:
             return
-        for atom_dict, mol in zip(self.atom_dict, mol_list):
-            mol.atoms_alias = atom_dict
+        # A single .psf file holds for all molecules: the copies of one molecule that
+        # :class:`~FOX.armc.ARMCPT` and :class:`~FOX.armc.CMAES` run, one per parameter set
+        atom_dicts = self.atom_dict if len(self.atom_dict) != 1 else repeat(self.atom_dict[0])
+        for atom_dict, mol in zip(atom_dicts, mol_list):
+            if mol is not None:  # `None` if the job crashed
+                mol.atoms_alias = atom_dict
