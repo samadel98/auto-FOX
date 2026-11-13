@@ -94,7 +94,7 @@ Index
     :attr:`monte_carlo.hdf5_file`               The name of the ARMC .hdf5 file.
     :attr:`monte_carlo.path`                    The path to the ARMC working directory.
     :attr:`monte_carlo.folder`                  The name of the ARMC working directory.
-    :attr:`monte_carlo.keep_files`              Whether to keep *all* raw output files or not.
+    :attr:`monte_carlo.keep_files`              Which raw output files to keep: all, none, or those of crashed jobs.
     :attr:`monte_carlo.seed`                    The seed of the random number generator used for the moves.
     :attr:`monte_carlo.n_jobs`                  The number of MD jobs that may run at the same time.
     :attr:`monte_carlo.stop`                    Criteria for stopping the optimization before it runs out of iterations.
@@ -805,10 +805,23 @@ Settings related to the Monte Carlo procedure itself.
 
     .. attribute:: monte_carlo.keep_files
 
-        :Parameter:     * **Type** - :class:`bool`
+        :Parameter:     * **Type** - :class:`bool` or :class:`str`
                         * **Default Value** - ``True``
 
-        Whether to keep *all* raw output files or not.
+        Which raw output files (the folders of the MD jobs) to keep.
+
+        * ``True``: keep all of them.
+        * ``False``: delete the folder of every MD job once its results are read.
+          The folder of a CP2K MD job can take 100 MB or more, so this saves a lot of disk space in long runs.
+        * ``"crashed"``: as ``False``, but keep the folders of the jobs that crashed,
+          so that the CP2K output of a crash can still be inspected.
+          The kept folders keep their job number (*e.g.* ``md_settings.817``),
+          and new jobs never reuse the name of a kept folder, also not after a restart.
+
+        .. code-block:: yaml
+
+            monte_carlo:
+                keep_files: crashed
 
 
     .. attribute:: monte_carlo.seed

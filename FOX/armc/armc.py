@@ -294,8 +294,7 @@ class ARMC(MonteCarloABC):
             if np.inf in self[key_new]:
                 raise RuntimeError('One or more jobs crashed in the first ARMC iteration; '
                                    'manual inspection of the cp2k output is recomended')
-            elif not self.keep_files:
-                self.clear_jobs()
+            self._clear_jobs()
 
             # The error of the initial parameters, the reference for the stop criteria
             self._update_best_error(self[key_new], kappa=-1)

@@ -21,6 +21,7 @@ from contextlib import redirect_stdout
 from scm.plams import config
 from qmflows.utils import InitRestart
 
+from .package_manager import sync_job_names
 from ..utils import log_traceback_locals
 from ..logger import Plams2Logger, wrap_plams_logger
 
@@ -42,6 +43,9 @@ def run_armc(armc: MonteCarloABC,
     """A wrapper arround :class:`MonteCarloABC` for handling the JobManager."""
     # Initialize the ARMC procedure
     with InitRestart(path=path, folder=folder):
+        # Jobs kept from an earlier run must not be overwritten by new ones
+        sync_job_names(config.default_jobmanager)
+
         # Create the .psf file
         if psf is not None:
             workdir = Path(config.default_jobmanager.workdir)

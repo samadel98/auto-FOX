@@ -28,7 +28,8 @@ from itertools import repeat, cycle, chain
 from collections import abc
 from typing import (
     Tuple, List, Dict, Optional, Union, Iterable, Hashable, Iterator, Any, Mapping, Callable,
-    KeysView, ValuesView, ItemsView, Sequence, TypeVar, overload, TYPE_CHECKING, cast, ClassVar
+    KeysView, ValuesView, ItemsView, Sequence, TypeVar, overload, TYPE_CHECKING, cast, ClassVar,
+    Literal,
 )
 
 import numpy as np
@@ -78,7 +79,7 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
 
     param: ParamMapping
     package_manager: PackageManager
-    keep_files: bool
+    keep_files: Union[bool, Literal['crashed']]
     hdf5_file: Union[str, 'PathLike[str]']
     pes: Dict[str, GetPesDescriptor]
     pes_validation: Dict[str, GetPesDescriptor]
@@ -154,7 +155,7 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
     def __init__(self, molecule: Iterable[MultiMolecule],
                  package_manager: PackageManager,
                  param: ParamMapping,
-                 keep_files: bool = False,
+                 keep_files: Union[bool, Literal['crashed']] = False,
                  hdf5_file: Union[str, PathLike] = 'armc.hdf5',
                  logger: Optional[Logger] = None,
                  pes_post_process: Optional[Iterable[PostProcess]] = None,
@@ -173,6 +174,10 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
 
         **stop** holds the criteria for stopping the optimization early
         (see :class:`~FOX.armc.StopCriteria`).
+
+        **keep_files** sets which job folders are kept once their results are read:
+        all of them (:data:`True`), none (:data:`False`), or only those of jobs
+        that crashed (``"crashed"``).
 
         """
         if kwargs:
@@ -197,6 +202,9 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         # Settings for running the actual MD calculations
         self.molecule = cast(Tuple[MultiMolecule, ...], molecule)
         self.package_manager = package_manager
+        if isinstance(keep_files, str) and keep_files != 'crashed':
+            raise ValueError("'keep_files' expected a boolean or 'crashed'; "
+                             f"observed value: {keep_files!r}")
         self.keep_files = keep_files
         self.n_jobs = n_jobs
 
@@ -420,9 +428,18 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         raise NotImplementedError('Method not implemented')
 
     @property
-    def clear_jobs(self) -> Callable[[], None]:
+    def clear_jobs(self) -> Callable[..., None]:
         """Delete all cp2k output files."""
         return self.package_manager.clear_jobs
+
+    def _clear_jobs(self) -> None:
+        """Delete the job folders that :attr:`keep_files` does not keep."""
+        if isinstance(self.keep_files, str):  # i.e. "crashed"
+            self.logger.info("Clearing jobs, except crashed ones")
+            self.clear_jobs(keep_crashed=True)
+        elif not self.keep_files:
+            self.logger.info("Clearing jobs")
+            self.clear_jobs()
 
     def run_jobs(
         self,
@@ -597,8 +614,7 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
             ret1 = {key: np.inf for key in self.pes.keys()}
             ret2 = {key: np.inf for key in self.pes_validation.keys()}
 
-        if not (get_first_key or self.keep_files):
-            self.logger.info("Clearing jobs")
-            self.clear_jobs()
+        if not get_first_key:
+            self._clear_jobs()
 
         return ret1, ret2, mol_list
