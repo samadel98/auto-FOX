@@ -53,7 +53,9 @@ __all__ = ['MonteCarloABC']
 
 T = TypeVar('T')
 
-PostProcess = Callable[[Optional[Iterable[MultiMolecule]], Optional['MonteCarloABC']], None]
+PostProcess = Callable[
+    [Optional[Iterable[Optional[MultiMolecule]]], Optional['MonteCarloABC']], None
+]
 GetPesDescriptor = Callable[[MultiMolecule, Result], ArrayOrScalar]
 Key = Tuple[float, ...]
 
@@ -84,6 +86,12 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
     stop: StopCriteria
     stop_reason: Optional[str]
     HAS_LOOP: ClassVar[bool] = False
+
+    #: Whether one crashed MD job only invalidates its own parameter set (:data:`True`)
+    #: rather than all jobs of the iteration.
+    #: Set by the classes that run one or more jobs per parameter set and several parameter sets
+    #: per iteration (:class:`~FOX.armc.ARMCPT` and :class:`~FOX.armc.CMAES`).
+    PARTIAL_RESULTS: ClassVar[bool] = False
     _PRIVATE_ATTR = frozenset({'_rng', '_start_time'})  # type: ignore
 
     @property
@@ -416,7 +424,9 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         """Delete all cp2k output files."""
         return self.package_manager.clear_jobs
 
-    def run_jobs(self) -> Union[Tuple[None, None], Tuple[List[MultiMolecule], List[Any]]]:
+    def run_jobs(
+        self,
+    ) -> Union[Tuple[None, None], Tuple[List[Optional[MultiMolecule]], List[Any]]]:
         """Run a geometry optimization followed by a molecular dynamics (MD) job.
 
         Returns a new :class:`~FOX.MultiMolecule` instance constructed from the MD trajectory
@@ -429,9 +439,13 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         -------
         :class:`list[FOX.MultiMolecule] <list>`, optional
             A list of MultiMolecule instance(s) constructed from the MD trajectory.
-            Will return :data:`None` if one of the jobs crashed
+            Will return :data:`None` if one of the jobs crashed.
+            If :attr:`PARTIAL_RESULTS` is :data:`True` only the molecules of the crashed jobs
+            are set to :data:`None`, and :data:`None` is returned if all jobs crashed.
 
         """
+        if self.PARTIAL_RESULTS:
+            return self.package_manager(logger=self.logger, n_processes=self.n_jobs, partial=True)
         return self.package_manager(logger=self.logger, n_processes=self.n_jobs)
 
     def move(self, idx: Optional[int] = None) -> Union[Exception, Key]:
@@ -513,7 +527,7 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
     ) -> Tuple[
         Dict[str, ArrayOrScalar],
         Dict[str, ArrayOrScalar],
-        Optional[List[MultiMolecule]]
+        Optional[List[Optional[MultiMolecule]]]
     ]:
         """Check if a **key** is already present in **history_dict**.
 
@@ -533,7 +547,8 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
         :class:`dict[str, np.ndarray[np.float64]] <dict>`, :class:`dict[str, np.ndarray[np.float64]] <dict>` and :class:`list[FOX.MultiMolecule] <list>`
             A previous value from **history_dict** or a new value from an MD calculation &
             a :class:`~FOX.MultiMolecule` instance constructed from the MD simulation.
-            Values are set to ``np.inf`` if the MD job crashed.
+            Values are set to ``np.inf`` if the MD job crashed
+            (with :attr:`PARTIAL_RESULTS`: only those of the crashed jobs).
 
         """  # noqa: E501
         # Generate PES descriptors
@@ -547,9 +562,13 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
                 for func1 in self.pes_post_process:
                     func1(mol_list, self)  # Post-process the MultiMolecules
 
+                # With `PARTIAL_RESULTS`, the molecules of the crashed jobs are `None`
                 ret1: Dict[str, ArrayOrScalar] = {}
                 iterator1 = zip(self.pes.items(), cycle(mol_list), cycle(result_list))
                 for (k, func2), mol, result in iterator1:
+                    if mol is None:
+                        ret1[k] = np.inf
+                        continue
                     _k, i = k.rsplit(".", maxsplit=1)
                     self.logger.info(f"Calculating descriptor {_k!r} for PES {i}")
                     try:
@@ -562,6 +581,9 @@ class MonteCarloABC(AbstractDataClass, ABC, Mapping[Key, np.ndarray]):
                 ret2: Dict[str, ArrayOrScalar] = {}
                 iterator2 = zip(self.pes_validation.items(), cycle(mol_list), cycle(result_list))
                 for (k, func2), mol, result in iterator2:
+                    if mol is None:
+                        ret2[k] = np.inf
+                        continue
                     _k, i = k.rsplit(".", maxsplit=1)
                     self.logger.info(f"Calculating validation descriptor {_k!r} for PES {i}")
                     try:

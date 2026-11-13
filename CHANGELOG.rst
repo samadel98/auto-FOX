@@ -63,6 +63,13 @@ Unreleased
 * Fix ``FOX.recipes.get_best`` and ``overlay_descriptor`` mixing up the parameter sets of
   ARMC-PT .hdf5 files: ``i`` now selects the parameter set, and ``armc_report`` reports
   the best parameter set of the best iteration.
+* Fix ``FOX.armc.CMAES`` and ``FOX.armc.ARMCPT`` discarding all MD jobs of an iteration when one
+  of them crashed. A crashed job now only gives its own candidate (CMA-ES) or parameter set
+  (ARMC-PT) an infinite error; the others are used as usual.
+* Fix ``FOX.armc.CMAES`` storing the error of a later candidate as ``initial_error`` when the
+  first generation was skipped; it is now always the error of the initial parameters.
+* Fix the atom aliases of a .psf file only being set for the first parameter set of
+  ARMC-PT and CMA-ES runs.
 * Add ``MultiMolecule.init_msd``, the mean squared displacement averaged over all time origins,
   and ``MultiMolecule.init_diffusion_coefficient``, self-diffusion coefficients from its slope.
   Both unwrap periodic trajectories with ``periodic``, and both work as ARMC PES descriptors.

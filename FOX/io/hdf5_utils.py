@@ -470,7 +470,7 @@ def to_hdf5(filename: PathType, dset_dict: Mapping[str, np.ndarray],
 
 
 def _xyz_to_hdf5(filename: PathType, omega: int,
-                 mol_list: Optional[Iterable[MultiMolecule]]) -> None:
+                 mol_list: Optional[Iterable[Optional[MultiMolecule]]]) -> None:
     r"""Export **mol** to the hdf5 file **filename**.
 
     Parameters
@@ -494,6 +494,8 @@ def _xyz_to_hdf5(filename: PathType, omega: int,
     with h5py.File(filename, 'r+', libver='latest') as f:
         iterator = ((f[f'xyz.{i}'], mol) for i, mol in enumerate(mol_list))
         for dset, mol in iterator:
+            if mol is None:  # The job crashed
+                continue
             i = len(mol)
             if i <= dset.shape[1]:
                 dset[omega, :i] = mol

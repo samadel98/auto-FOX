@@ -35,7 +35,7 @@ __all__ = ['ARMCPT']
 PesDict = Dict[str, ArrayOrScalar]
 PesMapping = Mapping[str, ArrayOrScalar]
 
-MolList = List[MultiMolecule]
+MolList = List[Optional[MultiMolecule]]
 MolIter = Iterable[MultiMolecule]
 
 Key = Tuple[float, ...]
@@ -105,6 +105,7 @@ class ARMCPT(ARMC):
     """An :class:`ARMC` subclass implementing a parallel tempering procedure."""
 
     HAS_LOOP: ClassVar[Literal[True]] = True  # type: ignore[assignment]
+    PARTIAL_RESULTS: ClassVar[Literal[True]] = True  # type: ignore[assignment]
 
     def __init__(self, swapper: SwapFunc = swap_random, **kwargs: Any) -> None:
         r"""Initialize an :class:`ARMCPT` instance.
